@@ -1,3 +1,4 @@
+using Gastitis.API.ExceptionHandling;
 using Gastitis.Application.Interfaces;
 using Gastitis.Infrastructure.Persistence;
 using Gastitis.Infrastructure.Services;
@@ -19,11 +20,14 @@ builder.Services.AddDbContext<GastitisDBContext>(options =>
 );
 
 builder.Services.AddControllers();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 
 
 var app = builder.Build();
+app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

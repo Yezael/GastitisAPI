@@ -11,5 +11,6 @@ namespace Gastitis.Application.Interfaces
 		Task<PagedResponseDTO<ExpenseResponseDTO>> GetAllAsync(ExpenseFilterDTO filter, ExpenseSortingDTO sorting);
 		Task<ExpenseResponseDTO> GetByIdAsync(int id);
 		Task<ExpensesSummaryResponseDTO> GetSummaryAsync(ExpenseFilterDTO filter);
+		Task<PagedResponseDTO<ExpensesCategorySummaryResponseDTO>> GetCategorySummaryAsync(ExpenseFilterDTO filter);
 	}
 }

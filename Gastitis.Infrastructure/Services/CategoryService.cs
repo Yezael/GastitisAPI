@@ -36,7 +36,7 @@ namespace Gastitis.Infrastructure.Services
 
             if (categoryEntity == null)
             {
-                throw new NotFoundException("Category not found");
+                throw new CategoryNotFoundException(id);
             }
 
             var response = new CategoryResponseDTO()

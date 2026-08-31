@@ -59,11 +59,10 @@ namespace Gastitis.Infrastructure.Services
 
             query = ApplyDateFilter(query, filter);
             query = ApplyCategoryFilter(query, filter);
+            query = ApplyKeywordFilter(query, filter);
             query = ApplySorting(query, sorting);
 
-            
             var paginationMetaData = await GetPaginationMetaData(query, filter);
-
 
             query = ApplyPaginationFilter(query, filter);
             var items = await GetExpenseResponseDTOs(query);
@@ -72,7 +71,7 @@ namespace Gastitis.Infrastructure.Services
             {
                 Items = items,
                 Page = filter.Page,
-                PageSize = items.Count,
+                PageSize = filter.PageSize,
                 TotalPages = paginationMetaData.totalPages,
                 TotalCount = paginationMetaData.totalCount
             };
@@ -80,8 +79,8 @@ namespace Gastitis.Infrastructure.Services
             return pagedResult;
         }
 
-        private static async Task<(int totalCount,int totalPages)> GetPaginationMetaData(
-            IQueryable<ExpenseEntity> query, 
+        private static async Task<(int totalCount,int totalPages)> GetPaginationMetaData<T>(
+            IQueryable<T> query, 
             ExpenseFilterDTO filter)
         {
             var totalCount = await query.CountAsync();
@@ -142,6 +141,12 @@ namespace Gastitis.Infrastructure.Services
         {
             if (!filter.CategoryID.HasValue) return query;
             return query.Where(e => e.CategoryId == filter.CategoryID.Value);
+        }
+
+        private static IQueryable<ExpenseEntity> ApplyKeywordFilter(IQueryable<ExpenseEntity> query, ExpenseFilterDTO filter)
+        {
+            if (string.IsNullOrWhiteSpace(filter.Keyword)) return query;
+            return query.Where(e => EF.Functions.ILike(e.Description,$"%{filter.Keyword}%"));
         }
 
         private static void ValidatePaginationFilter(ExpenseFilterDTO filter)
@@ -209,12 +214,54 @@ namespace Gastitis.Infrastructure.Services
 
             query = ApplyDateFilter(query, filter);
             query = ApplyCategoryFilter(query, filter);
+            query = ApplyKeywordFilter(query, filter);
 
             return new ExpensesSummaryResponseDTO()
             {
                 TotalAmount = await query.SumAsync(e => e.Value),
                 ExpensesCount = await query.CountAsync()
             }; 
+        }
+
+        public async Task<PagedResponseDTO<ExpensesCategorySummaryResponseDTO>> GetCategorySummaryAsync(
+            ExpenseFilterDTO filterDTO)
+        {
+
+            ValidatePaginationFilter(filterDTO);
+
+            var query = _dbContext.Expenses.AsNoTracking();
+
+            query = ApplyDateFilter(query, filterDTO);
+            query = ApplyCategoryFilter(query, filterDTO);
+            query = ApplyKeywordFilter(query, filterDTO);
+
+
+            var queryByCategory = query.GroupBy(e => new { e.CategoryId, e.Category.Name })
+                .Select(g => new ExpensesCategorySummaryResponseDTO()
+                {
+                    CategoryId = g.Key.CategoryId,
+                    CategoryName = g.Key.Name,
+                    TotalAmount = g.Sum(e => e.Value),
+                    ExpenseCount = g.Count()
+                });
+
+            var paginationMetaData = await GetPaginationMetaData(queryByCategory, filterDTO);
+
+            var items = await queryByCategory
+                .Skip((filterDTO.Page - 1) * filterDTO.PageSize)
+                .Take(filterDTO.PageSize)
+                .ToListAsync();
+
+            var pagedResult = new PagedResponseDTO<ExpensesCategorySummaryResponseDTO>()
+            {
+                Items = items,
+                Page = filterDTO.Page,
+                PageSize = filterDTO.PageSize,
+                TotalPages = paginationMetaData.totalPages,
+                TotalCount = paginationMetaData.totalCount
+            };
+
+            return pagedResult;
         }
 
         public async Task<ExpenseResponseDTO> UpdateAsync(int id, UpdateExpenseDTO expenseToUpdate)

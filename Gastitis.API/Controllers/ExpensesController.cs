@@ -84,6 +84,15 @@ namespace Gastitis.API.Controllers
             return Ok(allExpenses);
         }
 
+        [HttpGet("CategorySummary")]
+        public async Task<IActionResult> GetCategorySummary(
+            [FromQuery] ExpenseFilterDTO filter
+            )
+        {
+            var categorySummary = await _expenseService.GetCategorySummaryAsync(filter);
+            return Ok(categorySummary);
+        }
+
     }
 
 }
