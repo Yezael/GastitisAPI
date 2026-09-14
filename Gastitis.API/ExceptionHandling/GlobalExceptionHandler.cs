@@ -20,10 +20,9 @@ namespace Gastitis.API.ExceptionHandling
             )
         {
 
-            ProblemDetails problemDetail = null;
-            string messageForLogger = exception.Message;
+            ProblemDetails problemDetail;
 
-            switch  (exception)
+            switch (exception)
             {
                 case CategoryNotFoundException notFoundException:
                     problemDetail = new ProblemDetails()
@@ -31,6 +30,22 @@ namespace Gastitis.API.ExceptionHandling
                         Status = StatusCodes.Status404NotFound,
                         Title = "Category not found.",
                         Detail = notFoundException.Message
+                    };
+                    break;
+                case ExpenseNotFoundException expenseNotFound:
+                    problemDetail = new ProblemDetails()
+                    {
+                        Status = StatusCodes.Status404NotFound,
+                        Title = "Expense not found.",
+                        Detail = expenseNotFound.Message
+                    };
+                    break;
+                case ApplicationValidationException validationException:
+                    problemDetail = new ProblemDetails()
+                    {
+                        Status = StatusCodes.Status400BadRequest,
+                        Title = "Validation error.",
+                        Detail = validationException.Message
                     };
                     break;
                 default:

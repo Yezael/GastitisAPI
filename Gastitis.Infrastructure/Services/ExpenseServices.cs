@@ -23,7 +23,7 @@ namespace Gastitis.Infrastructure.Services
 
             if (!categoryExist)
             {
-                throw new NotFoundException("Category not found");
+                throw new CategoryNotFoundException(expenseRequest.CategoryId);
             }
 
             var newExpenseEntity = new ExpenseEntity()
@@ -102,21 +102,24 @@ namespace Gastitis.Infrastructure.Services
                 .ToListAsync();
         }
 
-        private async Task<decimal> SumExpenses(IQueryable<ExpenseEntity> query)
-        {
-            return await query.
-                SumAsync(e => e.Value);
-        }
-
         private static IQueryable<ExpenseEntity> ApplyDateFilter(IQueryable<ExpenseEntity> query, ExpenseFilterDTO filter)
         {
             if (filter.Month.HasValue && !filter.Year.HasValue)
             {
-                throw new ArgumentException(
-                    "Month filter requires year.");
+                throw new ApplicationValidationException("Month filter requires year.");
             }
 
-            if (!filter.Year.HasValue) return query;
+            if(filter.Month.HasValue && (filter.Month < 1 || filter.Month > 12))
+			{
+				throw new ApplicationValidationException("Month filter must be between 1 and 12.");
+			}
+
+            if(filter.Year.HasValue && (filter.Year < 1 || filter.Year > 9999))
+			{
+				throw new ApplicationValidationException("Year filter must be between 1 and 9999.");
+			}
+
+			if (!filter.Year.HasValue) return query;
 
 
             DateTime startDate;
@@ -153,18 +156,22 @@ namespace Gastitis.Infrastructure.Services
         {
             if(filter.Page < 1)
             {
-                throw new ArgumentException("Page must be greater than 0");
+                throw new ApplicationValidationException("Page must be greater than 0");
             }
 
             if (filter.PageSize < 1)
             {
-                throw new ArgumentException(
-                    "PageSize must be greater than 0.");
+                throw new ApplicationValidationException("PageSize must be greater than 0.");
             }
         }
 
         private static IQueryable<ExpenseEntity> ApplySorting(IQueryable<ExpenseEntity> query, ExpenseSortingDTO sorting)
         {
+            if (!Enum.IsDefined(sorting.SortDirection))
+            {
+				throw new ApplicationValidationException("Invalid sort direction: " + sorting.SortDirection);
+			}
+
             //then by ID is Important so that the order is deterministic even with same date expenses
             return sorting.SortBy switch
             {
@@ -174,7 +181,7 @@ namespace Gastitis.Infrastructure.Services
                 SortBy.Value => sorting.SortDirection ==SortDirection.Asc
                 ? query.OrderBy(e => e.Value).ThenBy(e => e.Id)
                 : query.OrderByDescending(e => e.Value).ThenByDescending(e => e.Id),
-                _ => throw new ArgumentException("Sorting by type not supported: " + sorting.SortBy)
+                _ => throw new ApplicationValidationException("Sorting by type not supported: " + sorting.SortBy)
             };
         }
 
@@ -192,7 +199,7 @@ namespace Gastitis.Infrastructure.Services
 
             if (expenseEntity == null)
             {
-                throw new NotFoundException("Expense not found");
+                throw new ExpenseNotFoundException(id);
             }
 
             var response = new ExpenseResponseDTO()
@@ -270,12 +277,12 @@ namespace Gastitis.Infrastructure.Services
                 .FirstOrDefaultAsync(e => e.Id == id);
             if (expenseEntity == null)
             {
-                throw new NotFoundException("Expense not found");
+                throw new ExpenseNotFoundException(id);
             }
             var categoryExist = await _dbContext.Categories.AnyAsync(c => c.Id == expenseToUpdate.CategoryId);
             if (!categoryExist)
             {
-                throw new NotFoundException("Category not found");
+                throw new CategoryNotFoundException(expenseToUpdate.CategoryId);
             }
             expenseEntity.Value = expenseToUpdate.Value;
             expenseEntity.Description = expenseToUpdate.Description;
