@@ -32,34 +32,20 @@ namespace Gastitis.API.Controllers
         public async Task<IActionResult> UpdateExpense(int id, [FromBody] UpdateExpenseDTO expenseRequest)
         {
             var expenseResponseDTO = await _expenseService.UpdateAsync(id, expenseRequest);
-
-            if(expenseResponseDTO == null)
-            {
-                return NotFound();
-            }
-
             return Ok(expenseResponseDTO);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteExpense(int id)
         {
-            var deleted = await _expenseService.DeleteAsync(id);
-
-            if (!deleted)
-            {
-                NotFound();
-            }
-
+            await _expenseService.DeleteAsync(id);
             return NoContent();
-
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<ExpenseResponseDTO>> GetById(int id)
         {
             var expense = await _expenseService.GetByIdAsync(id);
-
             return Ok(expense);
         }
 

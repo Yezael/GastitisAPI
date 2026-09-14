@@ -300,15 +300,17 @@ namespace Gastitis.Infrastructure.Services
         }
 
 
-        public async Task<bool> DeleteAsync(int expenseId)
+        public async Task DeleteAsync(int expenseId)
         {
             var expenseEntity = await _dbContext.Expenses
                 .FirstOrDefaultAsync(e => e.Id == expenseId);
-            if (expenseEntity == null) return false;
+            if (expenseEntity == null)
+            {
+				throw new ExpenseNotFoundException(expenseId);
+			}
            
             _dbContext.Expenses.Remove(expenseEntity);
             await _dbContext.SaveChangesAsync();
-            return true;
         }
     }
 }
