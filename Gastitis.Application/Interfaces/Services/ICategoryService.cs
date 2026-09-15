@@ -7,5 +7,6 @@ namespace Gastitis.Application.Interfaces
 		Task<CategoryResponseDTO> CreateAsync(CreateCategoryDTO createCategory);
 		Task<IReadOnlyList<CategoryResponseDTO>> GetAllAsync();
 		Task<CategoryResponseDTO> GetByIdAsync(int id);
+		Task DeleteAsync(int categoryID);
 	}
 }

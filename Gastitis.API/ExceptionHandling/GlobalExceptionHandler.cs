@@ -48,6 +48,14 @@ namespace Gastitis.API.ExceptionHandling
                         Detail = validationException.Message
                     };
                     break;
+                case SystemCategoryCannotBeDeletedException systemCategoryException:
+                    problemDetail = new ProblemDetails()
+                    {
+                        Status = StatusCodes.Status409Conflict,
+                        Title = "System category cannot be deleted.",
+                        Detail = systemCategoryException.Message
+                    };
+                    break;
                 default:
                     problemDetail = new ProblemDetails()
                     {

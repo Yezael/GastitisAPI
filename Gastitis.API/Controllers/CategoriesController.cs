@@ -19,7 +19,7 @@ namespace Gastitis.API.Controllers
         {
             var newCategory = await _categoryService.CreateAsync(categoryRequest);
             return CreatedAtAction(
-                nameof(GetCategories),
+                nameof(GetCategoryById),
                 new { id = newCategory.Id },
                 newCategory);
         }
@@ -31,11 +31,18 @@ namespace Gastitis.API.Controllers
             return Ok(allCats);
         }
 
-
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetCategoryById(int id)
         {
             var category = await _categoryService.GetByIdAsync(id);
             return Ok(category);
+        }
+
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteCategoryById(int id)
+        {
+            await _categoryService.DeleteAsync(id);
+            return NoContent();
         }
     }
 }

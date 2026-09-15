@@ -2,6 +2,7 @@
 using Gastitis.Application.Exceptions;
 using Gastitis.Application.Interfaces;
 using Gastitis.Domain.Entities;
+using Gastitis.Domain.Enums;
 using Gastitis.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -64,7 +65,41 @@ namespace Gastitis.Infrastructure.Services
             };
             return response;
         }
-    }
+
+        public async Task DeleteAsync(int categoryId)
+        {
+            //Using transaction here because we are both updating and deleting as two separate async operations, if throw, transaction rollback changes
+            //automatically.
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+            var categoryEntity = await _dbContext.Categories.FirstOrDefaultAsync(c => c.Id == categoryId);
+
+            if (categoryEntity == null)
+            {
+                throw new CategoryNotFoundException(categoryId);
+            }
+
+            if (categoryEntity.SystemCode.HasValue)
+            {
+                throw new SystemCategoryCannotBeDeletedException(categoryId);
+            }
+
+            var noneCategoryId = await _dbContext.Categories
+                .Where(c => c.SystemCode == SystemCategoryCode.None)
+                .Select(c => c.Id)
+                .SingleAsync();
+
+            await _dbContext.Expenses
+                .Where(e => e.CategoryId == categoryId)
+                .ExecuteUpdateAsync(update =>
+                    update.SetProperty(e => e.CategoryId, noneCategoryId));
+
+            _dbContext.Categories.Remove(categoryEntity);
+            await _dbContext.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+		}
+	}
 }
 
 
