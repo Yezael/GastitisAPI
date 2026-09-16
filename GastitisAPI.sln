@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gastitis.Infrastructure", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gastitis.API", "Gastitis.API\Gastitis.API.csproj", "{EC8C9207-7844-4EBC-9791-927C9CB3F7DB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gastitis.API.IntegrationTests", "Gastitis.API.IntegrationTests\Gastitis.API.IntegrationTests.csproj", "{0B592CF0-3497-12D8-FEEE-D74C63E7CA46}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{EC8C9207-7844-4EBC-9791-927C9CB3F7DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EC8C9207-7844-4EBC-9791-927C9CB3F7DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EC8C9207-7844-4EBC-9791-927C9CB3F7DB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0B592CF0-3497-12D8-FEEE-D74C63E7CA46}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B592CF0-3497-12D8-FEEE-D74C63E7CA46}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B592CF0-3497-12D8-FEEE-D74C63E7CA46}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B592CF0-3497-12D8-FEEE-D74C63E7CA46}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
