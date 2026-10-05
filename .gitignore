@@ -78,3 +78,5 @@ appsettings.Local.json
 
 # User-specific ASP.NET secrets
 secrets.json
+
+/deploy/identity/.env
