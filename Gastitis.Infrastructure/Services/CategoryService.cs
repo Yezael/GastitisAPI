@@ -1,6 +1,6 @@
 ﻿using Gastitis.Application.DTOs;
 using Gastitis.Application.Exceptions;
-using Gastitis.Application.Interfaces;
+using Gastitis.Application.Interfaces.Services;
 using Gastitis.Domain.Entities;
 using Gastitis.Domain.Enums;
 using Gastitis.Infrastructure.Persistence;

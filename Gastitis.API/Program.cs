@@ -1,10 +1,9 @@
 using Gastitis.API.ExceptionHandling;
-using Gastitis.Application.Interfaces;
+using Gastitis.Application.Interfaces.Services;
 using Gastitis.Infrastructure.Persistence;
 using Gastitis.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddDbContext<GastitisDBContext>(options =>
+builder.Services.AddDbContextFactory<GastitisDBContext>(options =>
 {
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("GastitisDatabase")).
@@ -27,6 +26,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IUserIdentityService, UserIdentityService>();
 
 //Authentication
 var authority = builder.Configuration["Authentication:Authority"];

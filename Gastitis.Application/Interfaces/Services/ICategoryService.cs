@@ -1,6 +1,7 @@
 ﻿
 using Gastitis.Application.DTOs;
-namespace Gastitis.Application.Interfaces
+
+namespace Gastitis.Application.Interfaces.Services
 {
 	public interface ICategoryService
 	{

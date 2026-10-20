@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Gastitis.API.IntegrationTests.Infrastructure
 {
@@ -43,9 +44,11 @@ namespace Gastitis.API.IntegrationTests.Infrastructure
 				services =>
 				{
 					services.RemoveAll<GastitisDBContext>();
+					services.RemoveAll<IDbContextFactory<GastitisDBContext>>();
 					services.RemoveAll<DbContextOptions<GastitisDBContext>>();
+					services.RemoveAll<IDbContextOptionsConfiguration<GastitisDBContext>>();
 
-					services.AddDbContext<GastitisDBContext>(
+					services.AddDbContextFactory<GastitisDBContext>(
 						options =>
 						{
 						options.UseNpgsql(_connectionString);

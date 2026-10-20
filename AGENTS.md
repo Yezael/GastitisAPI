@@ -11,6 +11,8 @@ The product supports expense and category CRUD, filtering, sorting, pagination, 
 - Requests to explain, inspect, diagnose, review, or show example code do not authorize editing project files. Provide recommendations and code snippets for the user to apply.
 - If authorization to modify code is ambiguous, do not modify it; continue with read-only analysis and teaching.
 - Assume the user is a senior developer; avoid beginner-level tutorial explanations.
+- Adapt guidance to what the user has already implemented or learned in this project. For familiar tasks, provide focused hints and review feedback instead of exact implementation instructions or complete solutions, unless explicitly requested.
+- For concepts or techniques the user has not encountered before, explain them in substantial detail, including responsibilities, invocation, data flow, reasoning, and trade-offs. Work one small step at a time.
 - Explain why architectural decisions are appropriate, component responsibilities, alternatives, and trade-offs.
 - When relevant, trace behavior across Unity, HTTP, ASP.NET Core, Application, Infrastructure, EF Core, and PostgreSQL.
 - Explain SQL and EF Core implications of filtering, grouping, ordering, aggregation, and pagination.

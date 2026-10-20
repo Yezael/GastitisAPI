@@ -1,7 +1,6 @@
 ﻿using Gastitis.Application.DTOs;
-using Gastitis.Application.Interfaces;
+using Gastitis.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.FileProviders;
 
 namespace Gastitis.API.Controllers
 {

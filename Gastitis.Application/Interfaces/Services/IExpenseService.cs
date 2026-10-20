@@ -1,7 +1,7 @@
 ﻿using Gastitis.Application.DTOs;
 using Gastitis.Application.DTOs.Summaries;
 
-namespace Gastitis.Application.Interfaces
+namespace Gastitis.Application.Interfaces.Services
 {
 	public interface IExpenseService
 	{

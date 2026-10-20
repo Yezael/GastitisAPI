@@ -1,5 +1,5 @@
 ﻿using Gastitis.Application.DTOs;
-using Gastitis.Application.Interfaces;
+using Gastitis.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Gastitis.API.Controllers
