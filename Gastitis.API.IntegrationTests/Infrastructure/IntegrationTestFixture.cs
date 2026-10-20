@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
+using System.Net.Http.Headers;
 
 namespace Gastitis.API.IntegrationTests.Infrastructure
 {
@@ -35,6 +36,8 @@ namespace Gastitis.API.IntegrationTests.Infrastructure
 				{
 					BaseAddress = new Uri("https://localhost")
 				});
+
+			Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(TestAuthenticationHandler.SchemeName);
 		}
 
 		public async Task ResetDatabaseAsync()

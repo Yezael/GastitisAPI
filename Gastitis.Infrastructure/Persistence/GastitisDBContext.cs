@@ -13,6 +13,7 @@ namespace Gastitis.Infrastructure.Persistence
 
 		public DbSet<ExpenseEntity> Expenses { get; set; }
 		public DbSet<CategoryEntity> Categories { get; set; }
+		public DbSet<UserEntity> Users { get; set; }
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
@@ -85,6 +86,16 @@ namespace Gastitis.Infrastructure.Persistence
 						.HasForeignKey(e => e.CategoryId)
 						.OnDelete(DeleteBehavior.Restrict);
 					
+				}
+				);
+
+			modelBuilder.Entity<UserEntity>
+				(
+				user =>
+				{
+					user.Property(u => u.Issuer).IsRequired();
+					user.Property(u => u.Subject).IsRequired();
+					user.HasIndex(u => new { u.Issuer, u.Subject }).IsUnique();
 				}
 				);
 		}

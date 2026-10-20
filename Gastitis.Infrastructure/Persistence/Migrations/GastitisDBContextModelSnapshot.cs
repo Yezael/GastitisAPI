@@ -8,7 +8,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace GastitisAPI.Migrations
+namespace Gastitis.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(GastitisDBContext))]
     partial class GastitisDBContextModelSnapshot : ModelSnapshot
@@ -116,6 +116,30 @@ namespace GastitisAPI.Migrations
                     b.HasIndex("CategoryId");
 
                     b.ToTable("Expenses");
+                });
+
+            modelBuilder.Entity("Gastitis.Domain.Entities.UserEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Issuer")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Issuer", "Subject")
+                        .IsUnique();
+
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("Gastitis.Domain.Entities.ExpenseEntity", b =>
