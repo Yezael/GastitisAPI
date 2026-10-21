@@ -5,6 +5,7 @@ using Gastitis.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Gastitis.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +28,8 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IUserIdentityService, UserIdentityService>();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddHttpContextAccessor();
 
 //Authentication
 var authority = builder.Configuration["Authentication:Authority"];
@@ -57,7 +60,20 @@ builder.Services.AddAuthorization(options =>
 {
 	var apiAccessPolicy = new AuthorizationPolicyBuilder()
 	.RequireAuthenticatedUser()
-	.RequireClaim("sub")
+	.RequireAssertion(context => 
+	{
+		var claims = context.User.FindAll("sub").ToList();
+		if (claims.Count != 1) return false;
+		var claim = claims[0];
+		return !string.IsNullOrWhiteSpace(claim.Value);
+	})
+	.RequireAssertion(context =>
+	{
+		var claims = context.User.FindAll("iss").ToList();
+		if (claims.Count != 1) return false;
+		var claim = claims[0];
+		return !string.IsNullOrWhiteSpace(claim.Value);
+	})
 	.RequireAssertion(context =>
 	{
 		return context.User.FindAll("scope")

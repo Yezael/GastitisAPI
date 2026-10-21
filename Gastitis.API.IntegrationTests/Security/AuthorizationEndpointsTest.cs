@@ -36,23 +36,13 @@ namespace Gastitis.API.IntegrationTests.Security
 		[InlineData("GASTITIS.ACCESS")]
 		public async Task GetCategories_WithoutRequiredScope_ReturnsForbidden(string scope)
 		{
-			using var request = new HttpRequestMessage(HttpMethod.Get, "/api/categories");
-			request.Headers.Add(TestAuthenticationHandler.ScopeHeaderName, scope);
-
-			using var response = await _fixture.Client.SendAsync(request);
-
-			Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+			await RunRequest_WithHeaderVariation_ExpectForbidden(TestAuthenticationHandler.ScopeHeaderName, scope);
 		}
 
 		[Fact]
 		public async Task GetCategories_WithoutScope_ReturnsForbidden()
 		{
-			using var request = new HttpRequestMessage(HttpMethod.Get, "/api/categories");
-			request.Headers.Add(TestAuthenticationHandler.OmitScopeHeaderName, "true");
-
-			using var response = await _fixture.Client.SendAsync(request);
-
-			Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+			await RunRequest_WithHeaderVariation_ExpectForbidden(TestAuthenticationHandler.OmitScopeHeaderName, "true");
 		}
 
 		[Theory]
@@ -72,8 +62,55 @@ namespace Gastitis.API.IntegrationTests.Security
 		[Fact]
 		public async Task GetCategories_WithoutRequiredSub_ReturnsForbidden()
 		{
+			await RunRequest_WithHeaderVariation_ExpectForbidden(TestAuthenticationHandler.OmitSubjectHeaderName, "true");
+		}
+
+		[Fact]
+		public async Task GetCategories_WithoutIssuer_ReturnsForbidden()
+		{
+			await RunRequest_WithHeaderVariation_ExpectForbidden(TestAuthenticationHandler.OmitIssuerHeaderName, "true");
+		}
+
+		[Fact]
+		public async Task GetCategories_WithEmptyIssuerValue_ReturnsForbidden()
+		{
+			await RunRequest_WithHeaderVariation_ExpectForbidden(TestAuthenticationHandler.IssuerHeaderName, "");
+		}
+
+		[Fact]
+		public async Task GetCategories_WithEmptySubjectValue_ReturnsForbidden()
+		{
+			await RunRequest_WithHeaderVariation_ExpectForbidden(TestAuthenticationHandler.SubjectHeaderName, "");
+		}
+
+		[Fact]
+		public async Task GetCategories_WithWhiteSpaceIssuerValue_ReturnsForbidden()
+		{
+			await RunRequest_WithHeaderVariation_ExpectForbidden(TestAuthenticationHandler.IssuerHeaderName, " ");
+		}
+
+		[Fact]
+		public async Task GetCategories_WithWhiteSpaceSubjectValue_ReturnsForbidden()
+		{
+			await RunRequest_WithHeaderVariation_ExpectForbidden(TestAuthenticationHandler.SubjectHeaderName, " ");
+		}
+
+		[Fact]
+		public async Task GetCategories_WithDuplicatedSubjectValue_ReturnsForbidden()
+		{
+			await RunRequest_WithHeaderVariation_ExpectForbidden(TestAuthenticationHandler.DuplicateSubHeaderName, "true");
+		}
+
+		[Fact]
+		public async Task GetCategories_WithDuplicatedIssuerValue_ReturnsForbidden()
+		{
+			await RunRequest_WithHeaderVariation_ExpectForbidden(TestAuthenticationHandler.DuplicateIssuerHeaderName, "true");
+		}
+
+		private async Task RunRequest_WithHeaderVariation_ExpectForbidden(string headerName, string value)
+		{
 			using var request = new HttpRequestMessage(HttpMethod.Get, "/api/categories");
-			request.Headers.Add(TestAuthenticationHandler.OmitSubjectHeaderName, "true");
+			request.Headers.Add(headerName, value);
 
 			using var response = await _fixture.Client.SendAsync(request);
 

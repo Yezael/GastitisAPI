@@ -8,11 +8,18 @@ namespace Gastitis.API.IntegrationTests.Infrastructure
 {
 	public sealed class TestAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 	{
+		public const string TestIssuer = "http://test-issuer";
 		public const string SchemeName = "Test";
 		public const string UserSubject = "test-alice";
+
 		public const string ScopeHeaderName = "X-Test-Scope";
+		public const string IssuerHeaderName = "X-Test-Issuer";
+		public const string SubjectHeaderName = "X-Test-Subject";
+		public const string DuplicateSubHeaderName = "X-Duplicate-Subject";
+		public const string DuplicateIssuerHeaderName = "X-Duplicate-Issuer";
 		public const string OmitScopeHeaderName = "X-Test-Omit-Scope";
 		public const string OmitSubjectHeaderName = "X-Test-Omit-Subject";
+		public const string OmitIssuerHeaderName = "X-Test-Omit-Issuer";
 
 		public TestAuthenticationHandler(
 			IOptionsMonitor<AuthenticationSchemeOptions> options, 
@@ -38,18 +45,46 @@ namespace Gastitis.API.IntegrationTests.Infrastructure
 				scope = scopeHeaderValue.ToString();
 			}
 
-			var shouldOmitScope = ReadBooleanHeader(OmitScopeHeaderName);
-			var shouldOmitSubject = ReadBooleanHeader(OmitSubjectHeaderName);
-
-			var claims = new List<Claim>();
-			if(!shouldOmitSubject)
+			var issuer = TestIssuer;
+			if (Request.Headers.TryGetValue(IssuerHeaderName, out var issuerHeaderValue))
 			{
-				claims.Add(new Claim("sub", UserSubject));
+				issuer = issuerHeaderValue.ToString();
 			}
 
-			if(!shouldOmitScope && !string.IsNullOrWhiteSpace(scope))
+			var subject = UserSubject;
+			if (Request.Headers.TryGetValue(SubjectHeaderName, out var headerSubjectValue))
+			{
+				subject = headerSubjectValue.ToString();
+			}
+
+			var shouldOmitScope = ReadBooleanHeader(OmitScopeHeaderName);
+			var shouldOmitSubject = ReadBooleanHeader(OmitSubjectHeaderName);
+			var shouldOmitIssuer = ReadBooleanHeader(OmitIssuerHeaderName);
+
+			var claims = new List<Claim>();
+
+			if (!shouldOmitScope && !string.IsNullOrWhiteSpace(scope))
 			{
 				claims.Add(new Claim("scope", scope));
+			}
+
+			if (!shouldOmitIssuer)
+			{
+				claims.Add(new Claim("iss", issuer));
+
+				if (ReadBooleanHeader(DuplicateIssuerHeaderName))
+				{
+					claims.Add(new Claim("iss", issuer));
+				}
+			}
+
+			if (!shouldOmitSubject)
+			{
+				claims.Add(new Claim("sub", subject));
+				if (ReadBooleanHeader(DuplicateSubHeaderName))
+				{
+					claims.Add(new Claim("sub", subject));
+				}
 			}
 
 			var identity = new ClaimsIdentity(claims, SchemeName);

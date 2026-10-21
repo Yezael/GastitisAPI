@@ -2,7 +2,7 @@
 using Gastitis.Application.Interfaces.Services;
 using Gastitis.Domain.Entities;
 using Gastitis.Infrastructure.Persistence;
-using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -125,9 +125,24 @@ namespace Gastitis.API.IntegrationTests.Users
 			var issuer = TestTokenIssuer.Issuer;
 			var subject = Guid.NewGuid().ToString();
 
+			
+
+			var interceptor = new UserInsertBarrierInterceptor();
+
+			await using var factory = _fixture.Factory.WithWebHostBuilder(builder =>
+			{
+				builder.ConfigureTestServices(services =>
+				{
+					services.ConfigureDbContext<GastitisDBContext>(
+						options => options.AddInterceptors(interceptor),
+						ServiceLifetime.Singleton
+						);
+				});
+			});
+
 			async Task<int> ResolveUserIdAsync()
 			{
-				await using var scope = _fixture.Factory.Services.CreateAsyncScope();
+				await using var scope = factory.Services.CreateAsyncScope();
 				var service = scope.ServiceProvider.GetRequiredService<IUserIdentityService>();
 				var result = await service.GetOrCreateUserIdAsync(issuer, subject);
 				return result;
@@ -138,13 +153,15 @@ namespace Gastitis.API.IntegrationTests.Users
 
 			var idsFound = await Task.WhenAll(resolveFirstTask, resolveSecondTask);
 
+			Assert.Equal(2, interceptor.ArrivalCount);
+
 			var firstId = idsFound[0];
 			var secondId = idsFound[1];
 
 			Assert.True(firstId > 0);
 			Assert.Equal(firstId, secondId);
 
-			await using var readScope = _fixture.Factory.Services.CreateAsyncScope();
+			await using var readScope = factory.Services.CreateAsyncScope();
 			var readDbContext = readScope.ServiceProvider.GetRequiredService<GastitisDBContext>();
 
 			var foundUser = await readDbContext.Users.AsNoTracking().SingleAsync(u => u.Issuer == issuer && u.Subject == subject);
