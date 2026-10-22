@@ -20,6 +20,8 @@ namespace Gastitis.API.IntegrationTests.Infrastructure
 		public const string OmitScopeHeaderName = "X-Test-Omit-Scope";
 		public const string OmitSubjectHeaderName = "X-Test-Omit-Subject";
 		public const string OmitIssuerHeaderName = "X-Test-Omit-Issuer";
+		public const string UseEmptySubjectHeaderName = "X-Test-Empty-Subject";
+		public const string UseEmptyIssuerHeaderName = "X-Test-Empty-Issuer";
 
 		public TestAuthenticationHandler(
 			IOptionsMonitor<AuthenticationSchemeOptions> options, 
@@ -50,11 +52,19 @@ namespace Gastitis.API.IntegrationTests.Infrastructure
 			{
 				issuer = issuerHeaderValue.ToString();
 			}
+			if (ReadBooleanHeader(UseEmptyIssuerHeaderName))
+			{
+				issuer = string.Empty;
+			}
 
 			var subject = UserSubject;
 			if (Request.Headers.TryGetValue(SubjectHeaderName, out var headerSubjectValue))
 			{
 				subject = headerSubjectValue.ToString();
+			}
+			if (ReadBooleanHeader(UseEmptySubjectHeaderName))
+			{
+				subject = string.Empty;
 			}
 
 			var shouldOmitScope = ReadBooleanHeader(OmitScopeHeaderName);

@@ -85,7 +85,12 @@ namespace Gastitis.Infrastructure.Persistence
 						.WithMany()
 						.HasForeignKey(e => e.CategoryId)
 						.OnDelete(DeleteBehavior.Restrict);
-					
+
+					expense.HasOne(e => e.OwnerUser)
+						.WithMany()
+						.HasForeignKey(e => e.OwnerUserId)
+						.IsRequired()
+						.OnDelete(DeleteBehavior.Restrict);
 				}
 				);
 

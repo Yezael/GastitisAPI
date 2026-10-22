@@ -74,13 +74,13 @@ namespace Gastitis.API.IntegrationTests.Security
 		[Fact]
 		public async Task GetCategories_WithEmptyIssuerValue_ReturnsForbidden()
 		{
-			await RunRequest_WithHeaderVariation_ExpectForbidden(TestAuthenticationHandler.IssuerHeaderName, "");
+			await RunRequest_WithHeaderVariation_ExpectForbidden(TestAuthenticationHandler.UseEmptyIssuerHeaderName, "true");
 		}
 
 		[Fact]
 		public async Task GetCategories_WithEmptySubjectValue_ReturnsForbidden()
 		{
-			await RunRequest_WithHeaderVariation_ExpectForbidden(TestAuthenticationHandler.SubjectHeaderName, "");
+			await RunRequest_WithHeaderVariation_ExpectForbidden(TestAuthenticationHandler.UseEmptySubjectHeaderName, "true");
 		}
 
 		[Fact]

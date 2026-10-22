@@ -49,6 +49,7 @@ namespace Gastitis.API.IntegrationTests.Infrastructure
 			await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
 			await dbContext.Expenses.ExecuteDeleteAsync();
+			await dbContext.Users.ExecuteDeleteAsync();
 			await dbContext.Categories.Where(category => !category.SystemCode.HasValue).ExecuteDeleteAsync();
 
 			await transaction.CommitAsync();

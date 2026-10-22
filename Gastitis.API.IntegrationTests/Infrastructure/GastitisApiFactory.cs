@@ -54,6 +54,7 @@ namespace Gastitis.API.IntegrationTests.Infrastructure
 						options.UseNpgsql(_connectionString);
 						}
 						);
+
 				}
 				);
 
@@ -67,6 +68,10 @@ namespace Gastitis.API.IntegrationTests.Infrastructure
 					options.DefaultForbidScheme = TestAuthenticationHandler.SchemeName;
 				})
 				.AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(TestAuthenticationHandler.SchemeName, options => { });
+
+				//Forcing the test controllers discovery to find all controllers in the given assembly, needed to be done this way, since the 
+				//real host doesn't discover controllers in the test assembly (which is correct)
+				services.AddControllers().AddApplicationPart(typeof(CurrentUserProbeController).Assembly);
 			});
 		}
 	}
