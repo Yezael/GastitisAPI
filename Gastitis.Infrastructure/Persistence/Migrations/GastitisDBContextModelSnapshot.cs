@@ -108,12 +108,17 @@ namespace Gastitis.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("OwnerUserId")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("Value")
                         .HasColumnType("numeric");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("OwnerUserId");
 
                     b.ToTable("Expenses");
                 });
@@ -150,7 +155,15 @@ namespace Gastitis.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Gastitis.Domain.Entities.UserEntity", "OwnerUser")
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Category");
+
+                    b.Navigation("OwnerUser");
                 });
 #pragma warning restore 612, 618
         }

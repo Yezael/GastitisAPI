@@ -11,14 +11,18 @@ namespace Gastitis.Infrastructure.Services
     public class ExpenseService : IExpenseService
     {
         private readonly GastitisDBContext _dbContext;
+        private readonly ICurrentUserService _currUserService;
 
-        public ExpenseService(GastitisDBContext dbContext)
+        public ExpenseService(GastitisDBContext dbContext, ICurrentUserService currentUserService)
         {
             _dbContext = dbContext;
+            _currUserService = currentUserService;
         }
 
         public async Task<ExpenseResponseDTO> CreateAsync(CreateExpenseDTO expenseRequest)
         {
+            var userId = await _currUserService.GetUserIdAsync();
+
             var categoryExist = await _dbContext.Categories.AnyAsync(c => c.Id == expenseRequest.CategoryId);
 
             if (!categoryExist)
@@ -31,7 +35,8 @@ namespace Gastitis.Infrastructure.Services
                 Value = expenseRequest.Value,
                 Description = expenseRequest.Description,
                 CategoryId = expenseRequest.CategoryId,
-                Date = expenseRequest.date
+                Date = expenseRequest.date,
+                OwnerUserId = userId
             };
 
             _dbContext.Expenses.Add(newExpenseEntity);

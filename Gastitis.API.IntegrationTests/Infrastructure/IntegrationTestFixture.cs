@@ -62,5 +62,18 @@ namespace Gastitis.API.IntegrationTests.Infrastructure
 
 			await _databaseContainer.DisposeAsync();
 		}
+
+		public async Task<HttpResponseMessage> SendGetCurrentUserRequest(string issuer, string subject, bool omitScope = false)
+		{
+			using var request = new HttpRequestMessage(HttpMethod.Get, "test/current-user");
+			if (omitScope)
+			{
+				request.Headers.Add(TestAuthenticationHandler.OmitScopeHeaderName, "true");
+			}
+			request.Headers.Add(TestAuthenticationHandler.IssuerHeaderName, issuer);
+			request.Headers.Add(TestAuthenticationHandler.SubjectHeaderName, subject);
+
+			return await Client.SendAsync(request);
+		}
 	}
 }

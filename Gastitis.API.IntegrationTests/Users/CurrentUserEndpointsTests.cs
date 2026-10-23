@@ -77,15 +77,7 @@ namespace Gastitis.API.IntegrationTests.Users
 
 		private async Task<HttpResponseMessage> SendGetCurrentUserRequest(bool omitScope = false)
 		{
-			using var request = new HttpRequestMessage(HttpMethod.Get, "test/current-user");
-			if (omitScope)
-			{
-				request.Headers.Add(TestAuthenticationHandler.OmitScopeHeaderName, "true");
-			}
-			request.Headers.Add(TestAuthenticationHandler.IssuerHeaderName, _issuer);
-			request.Headers.Add(TestAuthenticationHandler.SubjectHeaderName, _subject);
-
-			return await _fixture.Client.SendAsync(request);
+			return await _fixture.SendGetCurrentUserRequest(_issuer, _subject, omitScope);
 		}
 
 		public Task DisposeAsync()
