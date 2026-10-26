@@ -58,9 +58,11 @@ namespace Gastitis.Infrastructure.Services
         {
             ValidatePaginationFilter(filter);
 
+            var currUserId = await _currUserService.GetUserIdAsync();
+
             IQueryable<ExpenseEntity> query =
-                _dbContext.Expenses
-                    .AsNoTracking();
+                _dbContext.Expenses.AsNoTracking()
+                .Where(e => e.OwnerUserId == currUserId);
 
             query = ApplyDateFilter(query, filter);
             query = ApplyCategoryFilter(query, filter);
@@ -198,9 +200,14 @@ namespace Gastitis.Infrastructure.Services
 
         public async Task<ExpenseResponseDTO> GetByIdAsync(int id)
         {
-            var expenseEntity = await _dbContext.Expenses
+			var userId = await _currUserService.GetUserIdAsync();
+
+			var expenseEntity = await _dbContext.Expenses
                 .AsNoTracking()
-                .FirstOrDefaultAsync(e => e.Id == id);
+                .FirstOrDefaultAsync(
+                    e => e.Id == id 
+                    && e.OwnerUserId == userId
+                    );
 
             if (expenseEntity == null)
             {
@@ -278,8 +285,13 @@ namespace Gastitis.Infrastructure.Services
 
         public async Task<ExpenseResponseDTO> UpdateAsync(int id, UpdateExpenseDTO expenseToUpdate)
         {
+            var currentUserId = await _currUserService.GetUserIdAsync();
+
             var expenseEntity = await _dbContext.Expenses
-                .FirstOrDefaultAsync(e => e.Id == id);
+                .FirstOrDefaultAsync(e => 
+                    e.Id == id
+                    && e.OwnerUserId == currentUserId);
+
             if (expenseEntity == null)
             {
                 throw new ExpenseNotFoundException(id);
@@ -307,8 +319,11 @@ namespace Gastitis.Infrastructure.Services
 
         public async Task DeleteAsync(int expenseId)
         {
+            var currentUserId = await _currUserService.GetUserIdAsync();
+
             var expenseEntity = await _dbContext.Expenses
-                .FirstOrDefaultAsync(e => e.Id == expenseId);
+                .FirstOrDefaultAsync(e => e.Id == expenseId && e.OwnerUserId == currentUserId);
+
             if (expenseEntity == null)
             {
 				throw new ExpenseNotFoundException(expenseId);
