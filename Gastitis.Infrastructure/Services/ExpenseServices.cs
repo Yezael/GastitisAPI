@@ -227,9 +227,12 @@ namespace Gastitis.Infrastructure.Services
 
         public async Task<ExpensesSummaryResponseDTO> GetSummaryAsync(ExpenseFilterDTO filter)
         {
+            var currUserId = await _currUserService.GetUserIdAsync();
+
             IQueryable<ExpenseEntity> query =
                 _dbContext.Expenses
-                    .AsNoTracking();
+                    .AsNoTracking()
+                    .Where(e => e.OwnerUserId == currUserId);
 
             query = ApplyDateFilter(query, filter);
             query = ApplyCategoryFilter(query, filter);
@@ -246,9 +249,11 @@ namespace Gastitis.Infrastructure.Services
             ExpenseFilterDTO filterDTO)
         {
 
+            var currentUserId = await _currUserService.GetUserIdAsync();
+
             ValidatePaginationFilter(filterDTO);
 
-            var query = _dbContext.Expenses.AsNoTracking();
+            var query = _dbContext.Expenses.AsNoTracking().Where(e => e.OwnerUserId == currentUserId);
 
             query = ApplyDateFilter(query, filterDTO);
             query = ApplyCategoryFilter(query, filterDTO);
@@ -262,7 +267,8 @@ namespace Gastitis.Infrastructure.Services
                     CategoryName = g.Key.Name,
                     TotalAmount = g.Sum(e => e.Value),
                     ExpenseCount = g.Count()
-                });
+                })
+                .OrderBy(e => e.CategoryId);
 
             var paginationMetaData = await GetPaginationMetaData(queryByCategory, filterDTO);
 

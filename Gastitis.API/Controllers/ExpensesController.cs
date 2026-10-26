@@ -59,7 +59,7 @@ namespace Gastitis.API.Controllers
             return Ok(allExpenses);
         }
 
-        [HttpGet("Summary")]
+        [HttpGet("summary")]
         public async Task<IActionResult> GetSummary(
             [FromQuery] ExpenseFilterDTO filter
             )
@@ -69,7 +69,7 @@ namespace Gastitis.API.Controllers
             return Ok(allExpenses);
         }
 
-        [HttpGet("CategorySummary")]
+        [HttpGet("category-summary")]
         public async Task<IActionResult> GetCategorySummary(
             [FromQuery] ExpenseFilterDTO filter
             )

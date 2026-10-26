@@ -1,9 +1,11 @@
 ﻿using Gastitis.API.IntegrationTests.Infrastructure;
 using Gastitis.Application.DTOs;
+using Gastitis.Application.DTOs.Summaries;
 using Gastitis.Domain.Enums;
 using Gastitis.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Net.Http.Json;
 
@@ -65,27 +67,124 @@ namespace Gastitis.API.IntegrationTests.Expenses
 		[Fact]
 		public async Task GetAll_WithCorrectUser_ReturnsOwnedExpensesOnly()
 		{
-			(int categoryId, int expenseId) seedingResult = await SeedExpense();
-			var expectedExpenseId = seedingResult.expenseId;
+			var seedingResult = await SeedExpense();
+			var seededExpenseId1 = seedingResult.expenseId;
+			var seedingResult2 = await SeedExpense();
+			var seededExpenseId2 = seedingResult2.expenseId;
+			var seedingResult3 = await SeedExpense();
+			var seededExpenseId3 = seedingResult3.expenseId;
 
+			var seedingNonOwnerResult = await SeedExpense(customSubject: Guid.NewGuid().ToString());
+			var seededNonOwnExpenseId = seedingNonOwnerResult.expenseId;
 
+			using var request = new HttpRequestMessage(HttpMethod.Get, "api/expenses?pageSize=3&page=1");
+			using var response = await _fixture.Client.SendAsync(request);
+
+			Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+			var pagedResponse = await response.Content.ReadFromJsonAsync<PagedResponseDTO<ExpenseResponseDTO>>();
+			Assert.NotNull(pagedResponse);
+
+			Assert.Equal(3, pagedResponse.Items.Count);
+			Assert.Equal(3, pagedResponse.PageSize);
+			Assert.Equal(3, pagedResponse.TotalCount);
+			Assert.Equal(1, pagedResponse.Page);
+			Assert.Equal(1, pagedResponse.TotalPages);
+
+			Assert.Contains(pagedResponse.Items, e => e.Id == seededExpenseId1);
+			Assert.Contains(pagedResponse.Items, e => e.Id == seededExpenseId2);
+			Assert.Contains(pagedResponse.Items, e => e.Id == seededExpenseId3);
 		}
 
-		/// <summary> </summary>
-		/// <returns>category Id, Seeded Expenses Id</returns>
-		private async Task<(int, int)> SeedExpense()
+		[Fact]
+		public async Task GetExpensesSummary_WithOtherUsersExpenses_ReturnsOwnedExpensesSummary()
+		{
+			var seedingResult = await SeedExpense(customValue: 10);
+			var seededExpenseId1 = seedingResult.expenseId;
+			var seedingResult2 = await SeedExpense(customValue: 10);
+			var seededExpenseId2 = seedingResult2.expenseId;
+			var seedingResult3 = await SeedExpense(customValue: 10);
+			var seededExpenseId3 = seedingResult3.expenseId;
+
+			await SeedExpense(customSubject: Guid.NewGuid().ToString());
+
+			using var request = new HttpRequestMessage(HttpMethod.Get, "api/expenses/summary");
+			using var response = await _fixture.Client.SendAsync(request);
+
+			Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+			var summaryResponse = await response.Content.ReadFromJsonAsync<ExpensesSummaryResponseDTO>();
+			Assert.NotNull(summaryResponse);
+
+			Assert.Equal(30, summaryResponse.TotalAmount);
+			Assert.Equal(3, summaryResponse.ExpensesCount);
+		}
+
+		[Fact]
+		public async Task GetExpensesSummaryByCategory_WithOtherUsersExpenses_ReturnsOwnedCategoryExpensesSummary()
+		{
+			var seedingResult = await SeedExpense(customValue: 10, customSystemCategory: SystemCategoryCode.Utilities);
+			var seededExpenseId1 = seedingResult.expenseId;
+			var seedingResult2 = await SeedExpense(customValue: 10, customSystemCategory: SystemCategoryCode.Utilities);
+			var seededExpenseId2 = seedingResult2.expenseId;
+			var seedingResult3 = await SeedExpense(customValue: 10, customSystemCategory: SystemCategoryCode.Rent);
+			var seededExpenseId3 = seedingResult3.expenseId;
+
+			var utilitiesCategoryId = seedingResult.categoryId;
+			var rentCategoryId = seedingResult3.categoryId;
+			var otherUserSubjectId = Guid.NewGuid().ToString();
+
+			await SeedExpense(customSubject: otherUserSubjectId, customSystemCategory: SystemCategoryCode.Utilities);
+			await SeedExpense(customSubject: otherUserSubjectId, customSystemCategory: SystemCategoryCode.Groceries);
+
+			using var request = new HttpRequestMessage(HttpMethod.Get, $"api/expenses/category-summary?page=1&pageSize=2");
+
+			using var response = await _fixture.Client.SendAsync(request);
+
+			Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+			var pagedResponse = await response.Content.ReadFromJsonAsync<PagedResponseDTO<ExpensesCategorySummaryResponseDTO>>();
+			Assert.NotNull(pagedResponse);
+
+			var expectedCategoriesIds = new[] { utilitiesCategoryId, rentCategoryId }.OrderBy(id => id).ToArray();
+
+			Assert.Equal(expectedCategoriesIds, pagedResponse.Items.Select(e => e.CategoryId).ToArray());
+
+			Assert.Equal(2, pagedResponse.TotalCount);
+			Assert.Equal(2, pagedResponse.PageSize);
+			Assert.Equal(1, pagedResponse.TotalPages);
+			Assert.Equal(1, pagedResponse.Page);
+
+			var utilitiesCategory = pagedResponse.Items.FirstOrDefault(summary => summary.CategoryId == utilitiesCategoryId);
+			Assert.NotNull(utilitiesCategory);
+
+			Assert.Equal(20, utilitiesCategory.TotalAmount);
+			Assert.Equal(2, utilitiesCategory.ExpenseCount);
+
+			var rentCategory = pagedResponse.Items.FirstOrDefault(summary => summary.CategoryId == rentCategoryId);
+			Assert.NotNull(rentCategory);
+
+			Assert.Equal(10, rentCategory.TotalAmount);
+			Assert.Equal(1, rentCategory.ExpenseCount);
+		}
+
+		private async Task<(int categoryId, int expenseId)> SeedExpense(
+			string? customSubject = null, 
+			int? customValue = null,
+			SystemCategoryCode? customSystemCategory = null)
 		{
 			var categoryId = 0;
 			await using (var getCategoryScope = _fixture.Factory.Services.CreateAsyncScope())
 			{
 				var getCategoryDbContext = getCategoryScope.ServiceProvider.GetRequiredService<GastitisDBContext>();
-				categoryId = await getCategoryDbContext.Categories.Where(c => c.SystemCode == SystemCategoryCode.Utilities).Select(c => c.Id).SingleAsync();
+				var selectedsystemCategory = customSystemCategory ?? SystemCategoryCode.Utilities;
+				categoryId = await getCategoryDbContext.Categories.Where(c => c.SystemCode == selectedsystemCategory).Select(c => c.Id).SingleAsync();
 				Assert.NotEqual(0, categoryId);
 			}
 
 			var createExpenseDTO = new CreateExpenseDTO()
 			{
-				Value = 600,
+				Value = customValue?? 600,
 				Description = "test",
 				CategoryId = categoryId,
 				date = new DateTime(1996, 03, 31, 4, 0, 0, DateTimeKind.Utc)
@@ -95,6 +194,11 @@ namespace Gastitis.API.IntegrationTests.Expenses
 			{
 				Content = JsonContent.Create(createExpenseDTO)
 			};
+
+			if (customSubject != null)
+			{
+				createExpenseRequest.Headers.Add(TestAuthenticationHandler.SubjectHeaderName, customSubject);
+			}
 
 			using var createExpenseResponse = await _fixture.Client.SendAsync(createExpenseRequest);
 			Assert.Equal(HttpStatusCode.Created, createExpenseResponse.StatusCode);
@@ -109,7 +213,7 @@ namespace Gastitis.API.IntegrationTests.Expenses
 		[Fact]
 		public async Task DeleteExpense_WithCorrectOwner_ReturnsNoContentAndDeletesExpense()
 		{
-			(int categoryId, int expenseId) seedingResult = await SeedExpense();
+			var seedingResult = await SeedExpense();
 			var expectedExpenseId = seedingResult.expenseId;
 
 			using var deleteExpenseRequest = new HttpRequestMessage(HttpMethod.Delete, $"api/expenses/{expectedExpenseId}");
@@ -126,7 +230,7 @@ namespace Gastitis.API.IntegrationTests.Expenses
 		[Fact]
 		public async Task DeleteExpense_WithIncorrectOwner_ReturnsNotFoundAndDoesNotDeletesExpense()
 		{
-			(int categoryId, int expenseId) seedingResult = await SeedExpense();
+			var seedingResult = await SeedExpense();
 			var expectedExpenseId = seedingResult.expenseId;
 
 			var otherSubject = Guid.NewGuid().ToString();
@@ -170,7 +274,7 @@ namespace Gastitis.API.IntegrationTests.Expenses
 				Assert.NotEqual(0, expectedUpdatedCategoryId);
 			}
 
-			(int categoryId, int expenseId) seedingResult = await SeedExpense();
+			var seedingResult = await SeedExpense();
 			var expectedExpenseId = seedingResult.expenseId;
 			var categoryId = seedingResult.categoryId;
 
@@ -233,7 +337,7 @@ namespace Gastitis.API.IntegrationTests.Expenses
 		[Fact]
 		public async Task GetExpense_WithIncorrectOwner_ReturnsNotFound()
 		{
-			(int categoryId, int expenseId) seedingResult = await SeedExpense();
+			var seedingResult = await SeedExpense();
 			var expectedExpenseId = seedingResult.expenseId;
 
 			using var getWithCorrectSubjectRequest = new HttpRequestMessage(HttpMethod.Get, $"api/expenses/{expectedExpenseId}");

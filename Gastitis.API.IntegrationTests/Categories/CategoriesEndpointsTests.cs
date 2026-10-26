@@ -1,5 +1,7 @@
 ﻿using Gastitis.API.IntegrationTests.Infrastructure;
+using Gastitis.API.Services;
 using Gastitis.Application.DTOs;
+using Gastitis.Application.Interfaces.Services;
 using Gastitis.Domain.Entities;
 using Gastitis.Domain.Enums;
 using Gastitis.Infrastructure.Persistence;
@@ -157,9 +159,14 @@ namespace Gastitis.API.IntegrationTests.Categories
 			int unrelatedExpenseId;
 
 
+
 			await using (var createCategoryScope = _fixture.Factory.Services.CreateAsyncScope())
 			{
 				var dbContext = createCategoryScope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+
+				var currUserService = createCategoryScope.ServiceProvider.GetRequiredService<IUserIdentityService>();
+				var currUserId = await currUserService.GetOrCreateUserIdAsync(TestAuthenticationHandler.TestIssuer, TestAuthenticationHandler.UserSubject);
+				Assert.NotEqual(0, currUserId);
 
 				noneCategoryId = await dbContext.Categories
 					.Where(category => category.SystemCode == SystemCategoryCode.None)
@@ -187,7 +194,8 @@ namespace Gastitis.API.IntegrationTests.Categories
 					Value = 10m,
 					Description = "First target expense",
 					CategoryId = testCategoryId,
-					Date = new DateTime(2026, 9, 28, 12, 0, 0, DateTimeKind.Utc)
+					Date = new DateTime(2026, 9, 28, 12, 0, 0, DateTimeKind.Utc),
+					OwnerUserId = currUserId
 				};
 
 				var secondExpense = new ExpenseEntity
@@ -195,8 +203,8 @@ namespace Gastitis.API.IntegrationTests.Categories
 					Value = 20m,
 					Description = "Second target expense",
 					CategoryId = testCategoryId,
-					Date = new DateTime(2026, 9, 28, 13, 0, 0, DateTimeKind.Utc)
-
+					Date = new DateTime(2026, 9, 28, 13, 0, 0, DateTimeKind.Utc),
+					OwnerUserId = currUserId
 				};
 
 				var unrelatedExpense = new ExpenseEntity
@@ -204,8 +212,8 @@ namespace Gastitis.API.IntegrationTests.Categories
 					Value = 30m,
 					Description = "Unrelated expense",
 					CategoryId = unrelatedCategoryId,
-					Date = new DateTime(2026, 9, 28, 14, 0, 0, DateTimeKind.Utc)
-
+					Date = new DateTime(2026, 9, 28, 14, 0, 0, DateTimeKind.Utc),
+					OwnerUserId = currUserId
 				};
 
 				dbContext.Expenses.AddRange(firstExpense, secondExpense, unrelatedExpense);
