@@ -11,16 +11,24 @@ namespace Gastitis.Infrastructure.Services
     public class CategoryService : ICategoryService
     {
         private readonly GastitisDBContext _dbContext;
+        private readonly ICurrentUserService _currentUserservice;
 
-        public CategoryService(GastitisDBContext dbContext)
+        public CategoryService(GastitisDBContext dbContext, ICurrentUserService currentUserService)
         {
             _dbContext = dbContext;
+            _currentUserservice = currentUserService;
         }
 
         public async Task<IReadOnlyList<CategoryResponseDTO>> GetAllAsync()
         {
+            var currUserId = await _currentUserservice.GetUserIdAsync();
+
             return await _dbContext.Categories
                 .AsNoTracking()
+                .Where(c => 
+                    c.SystemCode.HasValue 
+                    || c.OwnerUserId == currUserId
+                )
                 .Select(c => new CategoryResponseDTO()
                 {
                     Id = c.Id,
@@ -31,9 +39,13 @@ namespace Gastitis.Infrastructure.Services
 
         public async Task<CategoryResponseDTO> GetByIdAsync(int id)
         {
+            var currUserId = await _currentUserservice.GetUserIdAsync();
+
             var categoryEntity = await _dbContext.Categories
                 .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == id);
+                .FirstOrDefaultAsync(c =>
+                c.Id == id
+                && (c.SystemCode.HasValue || c.OwnerUserId == currUserId));
 
             if (categoryEntity == null)
             {
@@ -50,9 +62,12 @@ namespace Gastitis.Infrastructure.Services
 
         public async Task<CategoryResponseDTO> CreateAsync(CreateCategoryDTO categoryRequest)
         {
+            var currUserId = await _currentUserservice.GetUserIdAsync();
+
             var newCategoryEntity = new CategoryEntity()
             {
-                Name = categoryRequest.Name
+                Name = categoryRequest.Name,
+                OwnerUserId = currUserId
             };
 
             _dbContext.Categories.Add(newCategoryEntity);
@@ -68,11 +83,15 @@ namespace Gastitis.Infrastructure.Services
 
         public async Task DeleteAsync(int categoryId)
         {
+            var currUserId = await _currentUserservice.GetUserIdAsync();
+
             //Using transaction here because we are both updating and deleting as two separate async operations, if throw, transaction rollback changes
             //automatically.
             await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
-            var categoryEntity = await _dbContext.Categories.FirstOrDefaultAsync(c => c.Id == categoryId);
+            var categoryEntity = await _dbContext.Categories.FirstOrDefaultAsync(c => 
+                c.Id == categoryId
+                && (c.SystemCode.HasValue || c.OwnerUserId == currUserId));
 
             if (categoryEntity == null)
             {

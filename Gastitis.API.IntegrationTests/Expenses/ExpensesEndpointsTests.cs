@@ -1,6 +1,8 @@
 ﻿using Gastitis.API.IntegrationTests.Infrastructure;
 using Gastitis.Application.DTOs;
 using Gastitis.Application.DTOs.Summaries;
+using Gastitis.Application.Interfaces.Services;
+using Gastitis.Domain.Entities;
 using Gastitis.Domain.Enums;
 using Gastitis.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -182,31 +184,26 @@ namespace Gastitis.API.IntegrationTests.Expenses
 				Assert.NotEqual(0, categoryId);
 			}
 
-			var createExpenseDTO = new CreateExpenseDTO()
+			await using var scope = _fixture.Factory.Services.CreateAsyncScope();
+
+			var userIdentityService = scope.ServiceProvider.GetRequiredService<IUserIdentityService>();
+			var userId = await userIdentityService.GetOrCreateUserIdAsync(TestAuthenticationHandler.TestIssuer, customSubject?? TestAuthenticationHandler.UserSubject);
+			Assert.NotEqual(0, userId);
+
+			var expenseEntity = new ExpenseEntity()
 			{
-				Value = customValue?? 600,
+				Value = customValue ?? 600,
 				Description = "test",
 				CategoryId = categoryId,
-				date = new DateTime(1996, 03, 31, 4, 0, 0, DateTimeKind.Utc)
+				Date = new DateTime(1996, 03, 31, 4, 0, 0, DateTimeKind.Utc),
+				OwnerUserId = userId
 			};
 
-			using var createExpenseRequest = new HttpRequestMessage(HttpMethod.Post, "api/expenses")
-			{
-				Content = JsonContent.Create(createExpenseDTO)
-			};
+			var dbContext = scope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+			dbContext.Expenses.Add(expenseEntity);
+			await dbContext.SaveChangesAsync();
 
-			if (customSubject != null)
-			{
-				createExpenseRequest.Headers.Add(TestAuthenticationHandler.SubjectHeaderName, customSubject);
-			}
-
-			using var createExpenseResponse = await _fixture.Client.SendAsync(createExpenseRequest);
-			Assert.Equal(HttpStatusCode.Created, createExpenseResponse.StatusCode);
-
-			var createdExpense = await createExpenseResponse.Content.ReadFromJsonAsync<ExpenseResponseDTO>();
-			Assert.NotNull(createdExpense);
-			var expectedExpenseId = createdExpense.Id;
-
+			var expectedExpenseId = expenseEntity.Id;
 			return (categoryId, expectedExpenseId);
 		}
 

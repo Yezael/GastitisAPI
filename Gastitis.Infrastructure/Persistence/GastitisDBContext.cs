@@ -74,6 +74,22 @@ namespace Gastitis.Infrastructure.Persistence
 							SystemCode = SystemCategoryCode.Hangouts
 						}
 					);
+					category.HasOne(c => c.OwnerUser)
+						.WithMany()
+						.HasForeignKey(c => c.OwnerUserId)
+						.IsRequired(false)
+						.OnDelete(DeleteBehavior.Restrict);
+
+					category.ToTable(categoryTable =>
+					{
+						categoryTable.HasCheckConstraint(
+							"CK_Categories_Ownership",
+						"""
+						("SystemCode" IS NOT NULL AND "OwnerUserId" IS NULL)
+						OR
+						("SystemCode" IS NULL AND "OwnerUserId" IS NOT NULL)
+						""");
+					});
 				}
 				);
 

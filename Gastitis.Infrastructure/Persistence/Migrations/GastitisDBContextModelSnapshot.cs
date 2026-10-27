@@ -34,16 +34,24 @@ namespace Gastitis.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int?>("OwnerUserId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("SystemCode")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("OwnerUserId");
+
                     b.HasIndex("SystemCode")
                         .IsUnique()
                         .HasFilter("\"SystemCode\" IS NOT NULL");
 
-                    b.ToTable("Categories");
+                    b.ToTable("Categories", t =>
+                        {
+                            t.HasCheckConstraint("CK_Categories_Ownership", "(\"SystemCode\" IS NOT NULL AND \"OwnerUserId\" IS NULL)\r\nOR\r\n(\"SystemCode\" IS NULL AND \"OwnerUserId\" IS NOT NULL)");
+                        });
 
                     b.HasData(
                         new
@@ -145,6 +153,16 @@ namespace Gastitis.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Gastitis.Domain.Entities.CategoryEntity", b =>
+                {
+                    b.HasOne("Gastitis.Domain.Entities.UserEntity", "OwnerUser")
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("OwnerUser");
                 });
 
             modelBuilder.Entity("Gastitis.Domain.Entities.ExpenseEntity", b =>

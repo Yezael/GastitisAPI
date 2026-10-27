@@ -29,6 +29,45 @@ namespace Gastitis.API.IntegrationTests.Categories
 		}
 
 		[Fact]
+		public async Task CreateCategory_WithAuthenticatedUser_ReturnsCreated()
+		{
+			var subject = "test-unique-subject";
+
+			var createDTO = new CreateCategoryDTO()
+			{
+				Name = "Test Category"
+			};
+
+			using var request = new HttpRequestMessage(HttpMethod.Post, "api/categories")
+			{
+				Content = JsonContent.Create(createDTO)
+			};
+			request.Headers.Add(TestAuthenticationHandler.SubjectHeaderName, subject);
+
+			using var response = await _fixture.Client.SendAsync(request);
+			Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+			var createdCategory = await response.Content.ReadFromJsonAsync<CategoryResponseDTO>();
+			Assert.NotNull(createdCategory);
+
+			var createdCategoryId = createdCategory.Id;
+
+			await using var scope = _fixture.Factory.Services.CreateAsyncScope();
+			var dbContext = scope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+			var ownerId = await dbContext.Users.
+				Where(u => 
+					u.Subject == subject 
+					&& u.Issuer == TestAuthenticationHandler.TestIssuer)
+				.Select(u => u.Id)
+				.SingleAsync();
+
+			var categoryFound = await dbContext.Categories.SingleAsync(c => c.Id == createdCategoryId);
+			Assert.Equal(ownerId, categoryFound.OwnerUserId);
+			Assert.Null(categoryFound.SystemCode);
+		}
+
+
+		[Fact]
 		public async Task DeleteCategory_WhenCategoryDoesNotExist_ReturnsNotFound()
 		{
 			const int missingCategoryId = int.MaxValue;
@@ -115,15 +154,19 @@ namespace Gastitis.API.IntegrationTests.Categories
 		public async Task DeleteCategory_WhenUserCategoryHasNoExpenses_ReturnsNoContentAndDeletesCategory()
 		{
 			int categoryId;
+			int currUserId;
 
 			await using (var createTestCategoryScope = _fixture.Factory.Services.CreateAsyncScope())
 			{
 				var dbContext = createTestCategoryScope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+				var userProvider = createTestCategoryScope.ServiceProvider.GetRequiredService<IUserIdentityService>();
+				currUserId = await userProvider.GetOrCreateUserIdAsync(TestAuthenticationHandler.TestIssuer, TestAuthenticationHandler.UserSubject);
 
 				var testCategory = new CategoryEntity
 				{
 					Name = "Test Category",
-					SystemCode = null
+					SystemCode = null,
+					OwnerUserId = currUserId
 				};
 
 				dbContext.Categories.Add(testCategory);
@@ -150,6 +193,156 @@ namespace Gastitis.API.IntegrationTests.Categories
 		}
 
 		[Fact]
+		public async Task GetCategory_WithDifferentUserId_ReturnsNotFound()
+		{
+			int systemCategoryId;
+			string customSubject = "other-unique-subject";
+
+			var seedingResult = await SeedCategory();
+			var createdCategoryId = seedingResult.categoryId;
+			var currentUserId = seedingResult.userId;
+
+			using var otherUserRequest = new HttpRequestMessage(HttpMethod.Get, $"api/categories/{createdCategoryId}");
+			otherUserRequest.Headers.Add(TestAuthenticationHandler.SubjectHeaderName, customSubject);
+
+			using var response = await _fixture.Client.SendAsync(otherUserRequest);
+			Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+			using var currentUserRequest = new HttpRequestMessage(HttpMethod.Get, $"api/categories/{createdCategoryId}");
+			using var currUserResponse = await _fixture.Client.SendAsync(currentUserRequest);
+			Assert.Equal(HttpStatusCode.OK, currUserResponse.StatusCode);
+
+			var retrievedCategoryDTO = await currUserResponse.Content.ReadFromJsonAsync<CategoryResponseDTO>();
+			Assert.NotNull(retrievedCategoryDTO);
+			Assert.Equal(createdCategoryId, retrievedCategoryDTO.Id);
+
+			await using var scope = _fixture.Factory.Services.CreateAsyncScope();
+			var dbContext = scope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+			systemCategoryId = await dbContext.Categories.Where(c => c.SystemCode == SystemCategoryCode.Utilities).Select(c => c.Id).SingleAsync();
+
+			var foundCategory = await dbContext.Categories.SingleAsync(c => c.Id == createdCategoryId);
+			Assert.Null(foundCategory.SystemCode);
+			Assert.Equal(currentUserId, foundCategory.OwnerUserId);
+
+			using var otherUserSystemCategoryRequest = new HttpRequestMessage(HttpMethod.Get, $"api/categories/{systemCategoryId}");
+			otherUserSystemCategoryRequest.Headers.Add(TestAuthenticationHandler.SubjectHeaderName, customSubject);
+
+			using var otherUserSystemCategoryResponse = await _fixture.Client.SendAsync(otherUserSystemCategoryRequest);
+			Assert.Equal(HttpStatusCode.OK, otherUserSystemCategoryResponse.StatusCode);
+
+			var retrievedSystemCategoryDTO = await otherUserSystemCategoryResponse.Content.ReadFromJsonAsync<CategoryResponseDTO>();
+			Assert.NotNull(retrievedSystemCategoryDTO);
+			Assert.Equal(systemCategoryId, retrievedSystemCategoryDTO.Id);
+
+			var foundSystemCategory = await dbContext.Categories.SingleAsync(c => c.Id == systemCategoryId);
+			Assert.NotNull(foundSystemCategory.SystemCode);
+			Assert.Null(foundSystemCategory.OwnerUserId);
+		}
+
+		[Fact]
+		public async Task DeleteCategory_WithIncorrectOwner_ReturnsNotFoundAndPreservesCategoryAndExpenses()
+		{
+			string customSubject = "other-unique-subject";
+			var seedingResult = await SeedCategory();
+			var seededCategoryId = seedingResult.categoryId;
+			var seededUserId = seedingResult.userId;
+			int seededExpenseId;
+
+			await using (var seedExpenseScope = _fixture.Factory.Services.CreateAsyncScope())
+			{
+				var seedDBContext = seedExpenseScope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+				var expense = new ExpenseEntity()
+				{
+					Value = 10,
+					Description = "Test Expense",
+					CategoryId = seededCategoryId,
+					OwnerUserId = seededUserId,
+					Date = new DateTime(1996, 03, 31, 4, 0, 0, DateTimeKind.Utc)
+				};
+				seedDBContext.Expenses.Add(expense);
+				await seedDBContext.SaveChangesAsync();
+				seededExpenseId = expense.Id;
+			}
+
+			using var request = new HttpRequestMessage(HttpMethod.Delete, $"api/categories/{seededCategoryId}");
+			request.Headers.Add(TestAuthenticationHandler.SubjectHeaderName, customSubject);
+
+			using var response = await _fixture.Client.SendAsync(request);
+			Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+			await using var scope = _fixture.Factory.Services.CreateAsyncScope();
+			var dbContext = scope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+
+			var categoryFound = await dbContext.Categories.SingleAsync(c => c.Id == seededCategoryId);
+			Assert.Equal(seededUserId, categoryFound.OwnerUserId);
+
+			var expenseFound = await dbContext.Expenses.SingleAsync(e => e.Id == seededExpenseId);
+			Assert.Equal(seededUserId, expenseFound.OwnerUserId);
+			Assert.Equal(seededCategoryId, expenseFound.CategoryId);
+		}
+
+		[Fact]
+		public async Task GetCategories_WithOtherUserCategoriesExisting_ReturnsOwnedAndSystemOnly()
+		{
+			string customSubject = "other-unique-subject";
+
+			var seedingResult1 = await SeedCategory();
+			var createdCategoryId1 = seedingResult1.categoryId;
+			var currentUserId = seedingResult1.userId;
+
+			var seedingResult2 = await SeedCategory();
+			var createdCategoryId2 = seedingResult2.categoryId;
+
+			var otherSubjectSeedingResult = await SeedCategory(customSubject);
+			var otherSubjectCategory = otherSubjectSeedingResult.categoryId;
+			var otherSubjectUserId = otherSubjectSeedingResult.userId;
+
+			using var requestCurrUserCategories = new HttpRequestMessage(HttpMethod.Get, "api/categories");
+			using var response = await _fixture.Client.SendAsync(requestCurrUserCategories);
+
+			Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+			await using var scope = _fixture.Factory.Services.CreateAsyncScope();
+			var dbContext = scope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+			var retrievedCategories = await response.Content.ReadFromJsonAsync<List<CategoryResponseDTO>>();
+			Assert.NotNull(retrievedCategories);
+
+			var systemCategoriesIds = await dbContext.Categories.Where(c => c.SystemCode.HasValue).Select(c => c.Id).ToListAsync();
+
+			var expectedCount = systemCategoriesIds.Count + 2;
+			Assert.Equal(expectedCount, retrievedCategories.Count);
+
+			Assert.Contains(retrievedCategories, c => c.Id == createdCategoryId1);
+			Assert.Contains(retrievedCategories, c => c.Id == createdCategoryId2);
+			Assert.DoesNotContain(retrievedCategories, c => c.Id == otherSubjectCategory);
+
+			for (int i = 0; i < systemCategoriesIds.Count; i++)
+			{
+				Assert.Contains(retrievedCategories, c => c.Id == systemCategoriesIds[i]);
+			}
+
+		}
+
+		private async Task<(int userId, int categoryId)> SeedCategory(string? customSubject = null)
+		{
+			await using var seedCategoryScope = _fixture.Factory.Services.CreateAsyncScope();
+			var seedDBContext = seedCategoryScope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+			var userProvider = seedCategoryScope.ServiceProvider.GetRequiredService<IUserIdentityService>();
+			var currentUserId = await userProvider.GetOrCreateUserIdAsync(TestAuthenticationHandler.TestIssuer, customSubject?? TestAuthenticationHandler.UserSubject);
+
+			var category = new CategoryEntity()
+			{
+				Name = "Test Category",
+				OwnerUserId = currentUserId
+			};
+			seedDBContext.Categories.Add(category);
+			await seedDBContext.SaveChangesAsync();
+			var createdCategoryId = category.Id;
+
+			return (currentUserId, createdCategoryId);
+		}
+
+		[Fact]
 		public async Task DeleteCategory_WhenUserCategoryHasExpenses_ReturnsNoContentAndReassignsExpensesToNone()
 		{
 			int testCategoryId;
@@ -157,7 +350,6 @@ namespace Gastitis.API.IntegrationTests.Categories
 			int unrelatedCategoryId;
 			int[] expenseIds;
 			int unrelatedExpenseId;
-
 
 
 			await using (var createCategoryScope = _fixture.Factory.Services.CreateAsyncScope())
@@ -181,7 +373,8 @@ namespace Gastitis.API.IntegrationTests.Categories
 				var testCategory = new CategoryEntity
 				{
 					Name = "Test Category",
-					SystemCode = null
+					SystemCode = null,
+					OwnerUserId = currUserId
 				};
 
 				dbContext.Categories.Add(testCategory);

@@ -23,7 +23,10 @@ namespace Gastitis.Infrastructure.Services
         {
             var userId = await _currUserService.GetUserIdAsync();
 
-            var categoryExist = await _dbContext.Categories.AnyAsync(c => c.Id == expenseRequest.CategoryId);
+            var categoryExist = await _dbContext.Categories.AnyAsync(c => 
+                c.Id == expenseRequest.CategoryId 
+                && (c.SystemCode.HasValue || c.OwnerUserId == userId)
+                );
 
             if (!categoryExist)
             {
