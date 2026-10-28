@@ -305,7 +305,11 @@ namespace Gastitis.Infrastructure.Services
             {
                 throw new ExpenseNotFoundException(id);
             }
-            var categoryExist = await _dbContext.Categories.AnyAsync(c => c.Id == expenseToUpdate.CategoryId);
+            var categoryExist = await _dbContext.Categories.AnyAsync(
+                c => 
+                c.Id == expenseToUpdate.CategoryId 
+                && (c.SystemCode.HasValue || c.OwnerUserId == currentUserId));
+
             if (!categoryExist)
             {
                 throw new CategoryNotFoundException(expenseToUpdate.CategoryId);
