@@ -4,8 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 using System.Net.Http.Headers;
+using Gastitis.Domain.Enums;
 
-namespace Gastitis.API.IntegrationTests.Infrastructure
+namespace Gastitis.API.Tests.Infrastructure
 {
 	public sealed class IntegrationTestFixture : IAsyncLifetime
 	{
@@ -74,6 +75,17 @@ namespace Gastitis.API.IntegrationTests.Infrastructure
 			request.Headers.Add(TestAuthenticationHandler.SubjectHeaderName, subject);
 
 			return await Client.SendAsync(request);
+		}
+
+		public async Task<int> GetSystemCategoryId(SystemCategoryCode? customSystemCategory = null)
+		{
+			await using var getCategoryScope = Factory.Services.CreateAsyncScope();
+			var getCategoryDbContext = getCategoryScope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+			var selectedsystemCategory = customSystemCategory ?? SystemCategoryCode.Utilities;
+			var categoryId = await getCategoryDbContext.Categories.Where(c => c.SystemCode == selectedsystemCategory).Select(c => c.Id).SingleAsync();
+
+			Assert.NotEqual(0, categoryId);
+			return categoryId;
 		}
 	}
 }

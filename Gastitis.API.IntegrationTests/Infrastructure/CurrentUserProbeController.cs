@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 
-namespace Gastitis.API.IntegrationTests.Infrastructure
+namespace Gastitis.API.Tests.Infrastructure
 {
 	//Controller useful to test directly using http the user providing from CurrentUserService
 	[ApiController]

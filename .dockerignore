@@ -1,0 +1,8 @@
+**/[Bb]in/
+**/[Oo]bj/
+.git
+
+**/.env
+**/.env.*
+
+**/appsettings.Development.json

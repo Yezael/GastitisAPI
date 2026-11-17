@@ -1,16 +1,19 @@
-﻿using Gastitis.API.IntegrationTests.Infrastructure;
+﻿using Gastitis.API.Tests.Infrastructure;
 using Gastitis.Application.DTOs;
+using Gastitis.Application.DTOs.Categories;
+using Gastitis.Application.DTOs.Expenses;
 using Gastitis.Application.DTOs.Summaries;
 using Gastitis.Application.Interfaces.Services;
 using Gastitis.Domain.Entities;
 using Gastitis.Domain.Enums;
 using Gastitis.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 
-namespace Gastitis.API.IntegrationTests.Expenses
+namespace Gastitis.API.Tests.Integration.Expenses
 {
 	public sealed class ExpensesEndpointsTests : IClassFixture<IntegrationTestFixture>, IAsyncLifetime
 	{
@@ -27,7 +30,7 @@ namespace Gastitis.API.IntegrationTests.Expenses
 		[Fact]
 		public async Task CreateExpense_WithAuthenticatedUser_PersistsCurrentUserAsOwner()
 		{
-			var categoryId = await GetSystemCategoryId();
+			var categoryId = await _fixture.GetSystemCategoryId();
 
 			using var request = new HttpRequestMessage(HttpMethod.Post, "api/expenses");
 			request.Headers.Add(TestAuthenticationHandler.IssuerHeaderName, _issuer);
@@ -38,7 +41,7 @@ namespace Gastitis.API.IntegrationTests.Expenses
 				Value = 500,
 				Description = "Test expense",
 				CategoryId = categoryId,
-				date = new DateTime(2026, 9, 28, 14, 0, 0, DateTimeKind.Utc)
+				Date = new DateTime(2026, 9, 28, 14, 0, 0, DateTimeKind.Utc)
 			};
 			request.Content = JsonContent.Create(createExpenseDTO);
 
@@ -56,6 +59,40 @@ namespace Gastitis.API.IntegrationTests.Expenses
 			var ownerIdFound = await dbContext.Expenses.AsNoTracking().Where(e => e.Id == expenseDTO.Id).Select(e => e.OwnerUserId).SingleAsync();
 			Assert.True(ownerIdFound > 0);
 			Assert.Equal(userFound.Id, ownerIdFound);
+		}
+
+		[Fact]
+		public async Task CreateExpense_WithZeroAsValue_ReturnsBadRequest()
+		{
+			var categoryId = await _fixture.GetSystemCategoryId();
+
+			using var request = new HttpRequestMessage(HttpMethod.Post, "api/expenses");
+			request.Headers.Add(TestAuthenticationHandler.IssuerHeaderName, _issuer);
+			request.Headers.Add(TestAuthenticationHandler.SubjectHeaderName, _subject);
+
+			var createExpenseDTO = new CreateExpenseDTO()
+			{
+				Value = 0,
+				Description = "Test expense",
+				CategoryId = categoryId,
+				Date = new DateTime(2026, 9, 28, 14, 0, 0, DateTimeKind.Utc)
+			};
+			request.Content = JsonContent.Create(createExpenseDTO);
+
+			using var response = await _fixture.Client.SendAsync(request);
+			Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+			Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+			var errorResponse = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+			Assert.NotNull(errorResponse);
+
+			Assert.True(errorResponse.Errors.ContainsKey("value"));
+			Assert.True(errorResponse.Extensions.ContainsKey("traceId"));
+
+			await using var scope = _fixture.Factory.Services.CreateAsyncScope();
+			var dbContext = scope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+
+			Assert.Equal(0, await dbContext.Expenses.AsNoTracking().CountAsync());
 		}
 
 		[Fact]
@@ -184,24 +221,13 @@ namespace Gastitis.API.IntegrationTests.Expenses
 			return (customUserId, customCategoryId);
 		}
 
-		private async Task<int> GetSystemCategoryId(SystemCategoryCode? customSystemCategory = null)
-		{
-			await using var getCategoryScope = _fixture.Factory.Services.CreateAsyncScope();
-			var getCategoryDbContext = getCategoryScope.ServiceProvider.GetRequiredService<GastitisDBContext>();
-			var selectedsystemCategory = customSystemCategory ?? SystemCategoryCode.Utilities;
-			var categoryId = await getCategoryDbContext.Categories.Where(c => c.SystemCode == selectedsystemCategory).Select(c => c.Id).SingleAsync();
-
-			Assert.NotEqual(0, categoryId);
-			return categoryId;
-		}
-
 		private async Task<(int categoryId, int expenseId)> SeedExpense(
 			string? customSubject = null, 
 			int? customValue = null,
 			string? customDescription = null,
 			SystemCategoryCode? customSystemCategory = null)
 		{
-			var categoryId = await GetSystemCategoryId(customSystemCategory);
+			var categoryId = await _fixture.GetSystemCategoryId(customSystemCategory);
 
 			await using var scope = _fixture.Factory.Services.CreateAsyncScope();
 
@@ -214,7 +240,7 @@ namespace Gastitis.API.IntegrationTests.Expenses
 				Value = customValue ?? 600,
 				Description = customDescription?? "test",
 				CategoryId = categoryId,
-				Date = new DateTime(1996, 03, 31, 4, 0, 0, DateTimeKind.Utc),
+				Date = new DateTime(2001, 03, 31, 4, 0, 0, DateTimeKind.Utc),
 				OwnerUserId = userId
 			};
 
@@ -290,7 +316,7 @@ namespace Gastitis.API.IntegrationTests.Expenses
 						Value = 10,
 						Description = "test",
 						CategoryId = customCategoryId,
-						date = new DateTime(1996, 03, 31, 4, 0, 0, 0, DateTimeKind.Utc)
+						Date = new DateTime(2001, 03, 31, 4, 0, 0, 0, DateTimeKind.Utc)
 					}
 					)
 			};
@@ -322,7 +348,7 @@ namespace Gastitis.API.IntegrationTests.Expenses
 				{
 					Description = "Test Expense",
 					Value = 10,
-					date = new DateTime(1996, 03, 31, 4, 0, 0, DateTimeKind.Utc),
+					Date = new DateTime(2001, 03, 31, 4, 0, 0, DateTimeKind.Utc),
 					CategoryId = customCategoryId
 				})
 			};
@@ -433,7 +459,7 @@ namespace Gastitis.API.IntegrationTests.Expenses
 		public async Task UpdateExpense_WithIncorrectOwner_ReturnsNotFound()
 		{
 
-			var expectedUpdatedCategoryId = await GetSystemCategoryId(SystemCategoryCode.Groceries);
+			var expectedUpdatedCategoryId = await _fixture.GetSystemCategoryId(SystemCategoryCode.Groceries);
 			var expectedUpdatedValue = 500;
 			var expectedUpdatedDescription = "Updated Description";
 

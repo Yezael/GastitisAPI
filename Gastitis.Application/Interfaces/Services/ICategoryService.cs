@@ -1,5 +1,4 @@
-﻿
-using Gastitis.Application.DTOs;
+﻿using Gastitis.Application.DTOs.Categories;
 
 namespace Gastitis.Application.Interfaces.Services
 {

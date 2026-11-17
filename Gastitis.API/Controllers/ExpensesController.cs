@@ -1,4 +1,4 @@
-﻿using Gastitis.Application.DTOs;
+﻿using Gastitis.Application.DTOs.Expenses;
 using Gastitis.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
 

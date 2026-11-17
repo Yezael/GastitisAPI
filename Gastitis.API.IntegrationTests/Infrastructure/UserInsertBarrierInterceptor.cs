@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore.Diagnostics;
 using System.Data.Common;
 
-namespace Gastitis.API.IntegrationTests.Infrastructure
+namespace Gastitis.API.Tests.Infrastructure
 {
 	public sealed class UserInsertBarrierInterceptor : DbCommandInterceptor
 	{

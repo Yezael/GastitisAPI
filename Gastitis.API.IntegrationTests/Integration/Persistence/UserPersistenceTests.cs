@@ -1,4 +1,4 @@
-﻿using Gastitis.API.IntegrationTests.Infrastructure;
+﻿using Gastitis.API.Tests.Infrastructure;
 using Gastitis.Domain.Entities;
 using Gastitis.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
 
-namespace Gastitis.API.IntegrationTests.Persistence
+namespace Gastitis.API.Tests.Integration.Persistence
 {
 	public sealed class UserPersistenceTests : IClassFixture<IntegrationTestFixture>
 	{

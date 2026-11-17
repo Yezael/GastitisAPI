@@ -1,4 +1,4 @@
-﻿namespace Gastitis.Application.DTOs
+﻿namespace Gastitis.Application.DTOs.Expenses
 {
     public class ExpenseResponseDTO
     {

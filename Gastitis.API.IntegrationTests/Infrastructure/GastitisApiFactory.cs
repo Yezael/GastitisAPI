@@ -1,16 +1,13 @@
-﻿using Gastitis.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Time.Testing;
 
-namespace Gastitis.API.IntegrationTests.Infrastructure
+namespace Gastitis.API.Tests.Infrastructure
 {
 	public sealed class GastitisApiFactory : WebApplicationFactory<Program>
 	{
@@ -29,7 +26,8 @@ namespace Gastitis.API.IntegrationTests.Infrastructure
 					new Dictionary<string,string?>
 					{
 						["Authentication:Authority"] = "https://identity.example.test",
-						["Authentication:Audience"] = "gastitis-api"
+						["Authentication:Audience"] = "gastitis-api",
+						["ConnectionStrings:GastitisDatabase"] = _connectionString
 					}
 					);
 			});
@@ -40,26 +38,9 @@ namespace Gastitis.API.IntegrationTests.Infrastructure
 		protected override void ConfigureWebHost(IWebHostBuilder builder)
 		{
 			builder.UseEnvironment("Testing");
-			builder.ConfigureServices(
-				services =>
-				{
-					services.RemoveAll<GastitisDBContext>();
-					services.RemoveAll<IDbContextFactory<GastitisDBContext>>();
-					services.RemoveAll<DbContextOptions<GastitisDBContext>>();
-					services.RemoveAll<IDbContextOptionsConfiguration<GastitisDBContext>>();
-
-					services.AddDbContextFactory<GastitisDBContext>(
-						options =>
-						{
-						options.UseNpgsql(_connectionString);
-						}
-						);
-
-				}
-				);
-
 			builder.ConfigureTestServices(services =>
 			{
+				services.AddSingleton<TimeProvider>(new FakeTimeProvider(new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc)));
 				services.AddAuthentication(options =>
 				{
 					options.DefaultScheme = TestAuthenticationHandler.SchemeName;

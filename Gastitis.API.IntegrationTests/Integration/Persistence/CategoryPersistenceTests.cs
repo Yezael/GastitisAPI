@@ -1,4 +1,4 @@
-﻿using Gastitis.API.IntegrationTests.Infrastructure;
+﻿using Gastitis.API.Tests.Infrastructure;
 using Gastitis.Application.Interfaces.Services;
 using Gastitis.Domain.Entities;
 using Gastitis.Domain.Enums;
@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
 
-namespace Gastitis.API.IntegrationTests.Persistence
+namespace Gastitis.API.Tests.Integration.Persistence
 {
 	public sealed class CategoryPersistenceTests : IClassFixture<IntegrationTestFixture>, IAsyncLifetime
 	{

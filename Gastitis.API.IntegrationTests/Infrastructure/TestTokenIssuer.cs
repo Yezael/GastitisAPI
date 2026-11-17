@@ -1,10 +1,8 @@
-﻿
-
-using Microsoft.IdentityModel.JsonWebTokens;
+﻿using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Cryptography;
 
-namespace Gastitis.API.IntegrationTests.Infrastructure
+namespace Gastitis.API.Tests.Infrastructure
 {
 	public sealed class TestTokenIssuer : IDisposable
 	{

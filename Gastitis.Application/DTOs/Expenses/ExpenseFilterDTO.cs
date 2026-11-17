@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Gastitis.Application.DTOs
+﻿
+namespace Gastitis.Application.DTOs.Expenses
 {
     public class ExpenseFilterDTO
     {

@@ -1,5 +1,4 @@
-﻿using Gastitis.API.IntegrationTests.Infrastructure;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,9 +6,10 @@ using System.Net;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Hosting;
+using Gastitis.API.Tests.Infrastructure;
 
 
-namespace Gastitis.API.IntegrationTests.Security
+namespace Gastitis.API.Tests.Integration.Security
 {
 	public sealed class JwtAuthenticationEndpointsTests : IClassFixture<IntegrationTestFixture>
 	{

@@ -7,10 +7,12 @@ namespace Gastitis.API.ExceptionHandling
     public class GlobalExceptionHandler : IExceptionHandler
     {
         private readonly ILogger<GlobalExceptionHandler> _logger;
+        private readonly IProblemDetailsService _problemDetailsService;
 
-        public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
+        public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger, IProblemDetailsService problemDetailsService)
         {
             _logger = logger;
+            _problemDetailsService = problemDetailsService;
         }
 
         public async ValueTask<bool> TryHandleAsync(
@@ -20,58 +22,35 @@ namespace Gastitis.API.ExceptionHandling
             )
         {
 
-            ProblemDetails problemDetail;
-
-            switch (exception)
+            ProblemDetails problemDetail = exception switch
             {
-                case CategoryNotFoundException notFoundException:
-                    problemDetail = new ProblemDetails()
-                    {
-                        Status = StatusCodes.Status404NotFound,
-                        Title = "Category not found.",
-                        Detail = notFoundException.Message
-                    };
-                    break;
-                case ExpenseNotFoundException expenseNotFound:
-                    problemDetail = new ProblemDetails()
-                    {
-                        Status = StatusCodes.Status404NotFound,
-                        Title = "Expense not found.",
-                        Detail = expenseNotFound.Message
-                    };
-                    break;
-                case ApplicationValidationException validationException:
-                    problemDetail = new ProblemDetails()
-                    {
-                        Status = StatusCodes.Status400BadRequest,
-                        Title = "Validation error.",
-                        Detail = validationException.Message
-                    };
-                    break;
-                case SystemCategoryCannotBeDeletedException systemCategoryException:
-                    problemDetail = new ProblemDetails()
-                    {
-                        Status = StatusCodes.Status409Conflict,
-                        Title = "System category cannot be deleted.",
-                        Detail = systemCategoryException.Message
-                    };
-                    break;
-                default:
-                    problemDetail = new ProblemDetails()
-                    {
-                        Status = StatusCodes.Status500InternalServerError,
-                        Title = "An unexpected error occurred.",
-                        Detail = "An unexpected error occurred while processing the request."
-                    };
-                    _logger.LogError(exception, $"An unhandled error occurred: {exception.Message}");
-                    break;
-            }
+                ApplicationValidationException validation => new ValidationProblemDetails(
+                    validation.Errors.ToDictionary(kvp => kvp.Key, kvp => kvp.Value))
+                {
+                    Status = StatusCodes.Status400BadRequest,
+                    Title = "One or more validation errors occurred.",
+                },
+                CategoryNotFoundException e => Problem(StatusCodes.Status404NotFound, "Category not found.", e.Message),
+                ExpenseNotFoundException e => Problem(StatusCodes.Status404NotFound, "Expense not found.", e.Message),
+				SystemCategoryCannotBeDeletedException e => Problem(StatusCodes.Status409Conflict, "System category cannot be deleted.", e.Message),
+                _ => Problem(StatusCodes.Status500InternalServerError, "An unexpected error occurred.", "An unexpected error occurred while processing the request.")
+			};
 
+            if(problemDetail.Status == StatusCodes.Status500InternalServerError)
+			{
+				_logger.LogError(exception, "An unhandled error occurred: {Method} {Path}", context.Request.Method, context.Request.Path);
+			}
+            context.Response.StatusCode = problemDetail.Status!.Value;
 
-            context.Response.StatusCode = problemDetail.Status.Value;
-            await context.Response.WriteAsJsonAsync(problemDetail, cancellationToken);
-
-            return true;
+            return await _problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+			{
+				HttpContext = context,
+				ProblemDetails = problemDetail,
+                Exception = exception
+			});
         }
+
+        private static ProblemDetails Problem(int status, string title, string detail) =>
+            new() { Status = status, Title = title, Detail = detail };
     }
 }

@@ -1,6 +1,5 @@
-﻿using Gastitis.API.IntegrationTests.Infrastructure;
-using Gastitis.API.Services;
-using Gastitis.Application.DTOs;
+﻿using Gastitis.API.Tests.Infrastructure;
+using Gastitis.Application.DTOs.Categories;
 using Gastitis.Application.Interfaces.Services;
 using Gastitis.Domain.Entities;
 using Gastitis.Domain.Enums;
@@ -12,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 
-namespace Gastitis.API.IntegrationTests.Categories
+namespace Gastitis.API.Tests.Integration.Categories
 {
 	public sealed class CategoriesEndpointsTests : IClassFixture<IntegrationTestFixture>, IAsyncLifetime
 	{
@@ -114,6 +113,10 @@ namespace Gastitis.API.IntegrationTests.Categories
 			foreach (var expectedName in expectedNames)
 			{
 				Assert.Contains(categories, category => category.Name == expectedName);
+			}
+			foreach (var category in categories)
+			{
+				Assert.True(category.IsSystemCategory);
 			}
 		}
 

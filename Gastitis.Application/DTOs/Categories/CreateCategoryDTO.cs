@@ -1,10 +1,10 @@
 ﻿using System;
 
-namespace Gastitis.Application.DTOs
+namespace Gastitis.Application.DTOs.Categories
 {
 
     public class CreateCategoryDTO
     {
-        public string Name { get; set; }
+        public required string Name { get; set; }
     }
 }

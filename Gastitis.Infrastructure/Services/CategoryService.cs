@@ -1,4 +1,4 @@
-﻿using Gastitis.Application.DTOs;
+﻿using Gastitis.Application.DTOs.Categories;
 using Gastitis.Application.Exceptions;
 using Gastitis.Application.Interfaces.Services;
 using Gastitis.Domain.Entities;
@@ -32,8 +32,9 @@ namespace Gastitis.Infrastructure.Services
                 .Select(c => new CategoryResponseDTO()
                 {
                     Id = c.Id,
-                    Name = c.Name
-                })
+                    Name = c.Name,
+					IsSystemCategory = c.SystemCode.HasValue
+				})
                 .ToListAsync();
         }
 
@@ -55,8 +56,9 @@ namespace Gastitis.Infrastructure.Services
             var response = new CategoryResponseDTO()
             {
                 Id = categoryEntity.Id,
-                Name = categoryEntity.Name
-            };
+                Name = categoryEntity.Name,
+				IsSystemCategory = categoryEntity.SystemCode.HasValue
+			};
             return response;
         }
 
@@ -76,7 +78,8 @@ namespace Gastitis.Infrastructure.Services
             var response = new CategoryResponseDTO()
             {
                 Id = newCategoryEntity.Id,
-                Name = newCategoryEntity.Name
+                Name = newCategoryEntity.Name,
+                IsSystemCategory = false
             };
             return response;
         }

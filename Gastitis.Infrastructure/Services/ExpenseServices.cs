@@ -5,6 +5,8 @@ using Gastitis.Domain.Entities;
 using Gastitis.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Gastitis.Application.DTOs.Summaries;
+using Gastitis.Application.DTOs.Expenses;
+using Gastitis.Application.DTOs.Categories;
 
 namespace Gastitis.Infrastructure.Services
 {
@@ -38,7 +40,7 @@ namespace Gastitis.Infrastructure.Services
                 Value = expenseRequest.Value,
                 Description = expenseRequest.Description,
                 CategoryId = expenseRequest.CategoryId,
-                Date = expenseRequest.date,
+                Date = expenseRequest.Date,
                 OwnerUserId = userId
             };
 
@@ -116,17 +118,17 @@ namespace Gastitis.Infrastructure.Services
         {
             if (filter.Month.HasValue && !filter.Year.HasValue)
             {
-                throw new ApplicationValidationException("Month filter requires year.");
+                throw new ApplicationValidationException(nameof(filter.Year), "Month filter requires year.");
             }
 
             if(filter.Month.HasValue && (filter.Month < 1 || filter.Month > 12))
 			{
-				throw new ApplicationValidationException("Month filter must be between 1 and 12.");
+				throw new ApplicationValidationException(nameof(filter.Month), "Month filter must be between 1 and 12.");
 			}
 
             if(filter.Year.HasValue && (filter.Year < 1 || filter.Year > 9999))
 			{
-				throw new ApplicationValidationException("Year filter must be between 1 and 9999.");
+				throw new ApplicationValidationException(nameof(filter.Year), "Year filter must be between 1 and 9999.");
 			}
 
 			if (!filter.Year.HasValue) return query;
@@ -166,12 +168,12 @@ namespace Gastitis.Infrastructure.Services
         {
             if(filter.Page < 1)
             {
-                throw new ApplicationValidationException("Page must be greater than 0");
+                throw new ApplicationValidationException(nameof(filter.Page), "Page must be greater than 0");
             }
 
             if (filter.PageSize < 1)
             {
-                throw new ApplicationValidationException("PageSize must be greater than 0.");
+                throw new ApplicationValidationException(nameof(filter.PageSize), "PageSize must be greater than 0.");
             }
         }
 
@@ -179,7 +181,7 @@ namespace Gastitis.Infrastructure.Services
         {
             if (!Enum.IsDefined(sorting.SortDirection))
             {
-				throw new ApplicationValidationException("Invalid sort direction: " + sorting.SortDirection);
+				throw new ApplicationValidationException(nameof(sorting.SortDirection), "Invalid sort direction: " + sorting.SortDirection);
 			}
 
             //then by ID is Important so that the order is deterministic even with same date expenses
@@ -191,7 +193,7 @@ namespace Gastitis.Infrastructure.Services
                 SortBy.Value => sorting.SortDirection ==SortDirection.Asc
                 ? query.OrderBy(e => e.Value).ThenBy(e => e.Id)
                 : query.OrderByDescending(e => e.Value).ThenByDescending(e => e.Id),
-                _ => throw new ApplicationValidationException("Sorting by type not supported: " + sorting.SortBy)
+                _ => throw new ApplicationValidationException(nameof(sorting.SortBy), "Sorting by type not supported: " + sorting.SortBy)
             };
         }
 

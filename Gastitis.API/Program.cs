@@ -6,6 +6,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Gastitis.API.Services;
+using FluentValidation;
+using System.Text.Json;
+using Gastitis.API.Validation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,23 +16,40 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+var connectionString = builder.Configuration.GetConnectionString("GastitisDatabase");
+if(string.IsNullOrWhiteSpace(connectionString))
+{
+	throw new InvalidOperationException("Connection string 'GastitisDatabase' not found.");
+}
+
 builder.Services.AddDbContextFactory<GastitisDBContext>(options =>
 {
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("GastitisDatabase")).
-        LogTo(Console.WriteLine)
-       .EnableSensitiveDataLogging();
+	options.UseNpgsql(connectionString);
+	options.EnableSensitiveDataLogging(builder.Environment.IsDevelopment());
 }
 );
 
-builder.Services.AddControllers();
-builder.Services.AddProblemDetails();
+builder.Services.AddControllers(options =>
+{
+	options.Filters.Add<FluentValidationActionFilter>();
+});
+
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+ValidatorOptions.Global.PropertyNameResolver = (_, member, _) 
+	=> member is null ? null : JsonNamingPolicy.CamelCase.ConvertName(member.Name);
+
+builder.Services.AddProblemDetails(options =>
+	options.CustomizeProblemDetails = ctx =>
+		ctx.ProblemDetails.Instance ??= $"{ctx.HttpContext.Request.Method} {ctx.HttpContext.Request.Path}");
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IUserIdentityService, UserIdentityService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton(TimeProvider.System);
 
 //Authentication
 var authority = builder.Configuration["Authentication:Authority"];

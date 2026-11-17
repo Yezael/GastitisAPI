@@ -1,4 +1,4 @@
-﻿using Gastitis.API.IntegrationTests.Infrastructure;
+﻿using Gastitis.API.Tests.Infrastructure;
 using Gastitis.Application.Interfaces.Services;
 using Gastitis.Domain.Entities;
 using Gastitis.Infrastructure.Persistence;
@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Gastitis.API.IntegrationTests.Users
+namespace Gastitis.API.Tests.Integration.Users
 {
 	public sealed class UserIdentityServiceTests : IClassFixture<IntegrationTestFixture>
 	{

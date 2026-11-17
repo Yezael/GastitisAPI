@@ -1,4 +1,6 @@
 ﻿using Gastitis.Application.DTOs;
+using Gastitis.Application.DTOs.Categories;
+using Gastitis.Application.DTOs.Expenses;
 using Gastitis.Application.DTOs.Summaries;
 
 namespace Gastitis.Application.Interfaces.Services

@@ -1,9 +1,9 @@
-﻿using Gastitis.API.IntegrationTests.Infrastructure;
+﻿using Gastitis.API.Tests.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
 using System.Net.Http.Headers;
 
-namespace Gastitis.API.IntegrationTests.Security
+namespace Gastitis.API.Tests.Integration.Security
 {
 	public sealed class AuthorizationEndpointsTest : IClassFixture<IntegrationTestFixture>
 	{

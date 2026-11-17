@@ -1,4 +1,4 @@
-﻿using Gastitis.API.IntegrationTests.Infrastructure;
+﻿using Gastitis.API.Tests.Infrastructure;
 using Gastitis.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,7 +6,7 @@ using System.Net;
 using System.Net.Http.Json;
 
 
-namespace Gastitis.API.IntegrationTests.Users
+namespace Gastitis.API.Tests.Integration.Users
 {
 	public sealed class CurrentUserEndpointsTests : IClassFixture<IntegrationTestFixture>, IAsyncLifetime
 	{
