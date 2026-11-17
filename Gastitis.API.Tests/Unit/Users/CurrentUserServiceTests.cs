@@ -3,7 +3,7 @@ using Gastitis.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
-namespace Gastitis.API.Tests.Integration.Users
+namespace Gastitis.API.Tests.Unit.Users
 {
 	public sealed class CurrentUserServiceTests
 	{

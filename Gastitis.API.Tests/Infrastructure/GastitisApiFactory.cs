@@ -40,7 +40,6 @@ namespace Gastitis.API.Tests.Infrastructure
 			builder.UseEnvironment("Testing");
 			builder.ConfigureTestServices(services =>
 			{
-				services.AddSingleton<TimeProvider>(new FakeTimeProvider(new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc)));
 				services.AddAuthentication(options =>
 				{
 					options.DefaultScheme = TestAuthenticationHandler.SchemeName;

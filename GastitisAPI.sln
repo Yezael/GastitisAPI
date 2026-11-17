@@ -11,7 +11,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gastitis.Infrastructure", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gastitis.API", "Gastitis.API\Gastitis.API.csproj", "{EC8C9207-7844-4EBC-9791-927C9CB3F7DB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gastitis.API.Tests", "Gastitis.API.IntegrationTests\Gastitis.API.Tests.csproj", "{0B592CF0-3497-12D8-FEEE-D74C63E7CA46}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gastitis.API.Tests", "Gastitis.API.Tests\Gastitis.API.Tests.csproj", "{0B592CF0-3497-12D8-FEEE-D74C63E7CA46}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

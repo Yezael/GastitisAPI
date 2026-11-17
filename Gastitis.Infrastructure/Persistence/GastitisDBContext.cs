@@ -23,6 +23,9 @@ namespace Gastitis.Infrastructure.Persistence
 				(
 				category =>
 				{
+					category.Property(c => c.Name)
+						.HasMaxLength(Domain.Constants.CategoriesConstraints.CategoryNameMaxLength);
+
 					category.Property(c => c.SystemCode)
 						.HasConversion<string>();
 
@@ -97,6 +100,12 @@ namespace Gastitis.Infrastructure.Persistence
 				(
 				expense =>
 				{
+					expense.Property(e => e.Description)
+						.HasMaxLength(Domain.Constants.ExpenseConstraints.ExpenseDescriptionMaxLength);
+
+					expense.Property(e => e.Value)
+						.HasPrecision(Domain.Constants.ExpenseConstraints.ExpenseValuePrecision, Domain.Constants.ExpenseConstraints.ExpenseValueScale);
+
 					expense.HasOne(e => e.Category)
 						.WithMany()
 						.HasForeignKey(e => e.CategoryId)

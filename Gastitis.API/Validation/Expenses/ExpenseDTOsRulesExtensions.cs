@@ -9,7 +9,12 @@ namespace Gastitis.API.Validation.Expenses
 		public static IRuleBuilderOptions<T, decimal> ValidateExpenseValue<T>(
 			this IRuleBuilder<T, decimal> ruleInitial)
 		{
-			return ruleInitial.GreaterThan(0).PrecisionScale(18, 2, ignoreTrailingZeros: true);
+			return ruleInitial
+				.GreaterThan(0)
+				.PrecisionScale(
+					ExpenseConstraints.ExpenseValuePrecision, 
+					ExpenseConstraints.ExpenseValueScale, 
+					ignoreTrailingZeros: true);
 		}
 
 		public static IRuleBuilderOptions<T, string> ValidateExpenseDescription<T>(
