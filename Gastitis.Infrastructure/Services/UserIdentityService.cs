@@ -13,7 +13,7 @@ namespace Gastitis.Infrastructure.Services
 			_dbContextFactory = dbContextFactory;
 		}
 
-		public async Task<int> GetOrCreateUserIdAsync(string issuer, string subject, CancellationToken cancellationToken = default)
+		public async Task<int> GetOrCreateUserIdAsync(string issuer, string subject, CancellationToken cancellationToken)
 		{
 			ArgumentException.ThrowIfNullOrWhiteSpace(issuer);
 			ArgumentException.ThrowIfNullOrWhiteSpace(subject);

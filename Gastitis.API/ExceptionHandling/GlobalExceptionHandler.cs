@@ -22,6 +22,17 @@ namespace Gastitis.API.ExceptionHandling
             )
         {
 
+            if(exception is OperationCanceledException && context.RequestAborted.IsCancellationRequested)
+            {
+                _logger.LogInformation("Request {Method} {Path} was cancelled by the client.", context.Request.Method, context.Request.Path);
+                if (!context.Response.HasStarted)
+                {
+                    context.Response.StatusCode = StatusCodes.Status499ClientClosedRequest;
+                }
+                return true;
+            }
+
+
             ProblemDetails problemDetail = exception switch
             {
                 ApplicationValidationException validation => new ValidationProblemDetails(

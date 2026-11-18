@@ -15,9 +15,9 @@ namespace Gastitis.API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateCategory(CreateCategoryDTO categoryRequest)
+        public async Task<IActionResult> CreateCategory(CreateCategoryDTO categoryRequest, CancellationToken cancellationToken)
         {
-            var newCategory = await _categoryService.CreateAsync(categoryRequest);
+            var newCategory = await _categoryService.CreateAsync(categoryRequest, cancellationToken);
             return CreatedAtAction(
                 nameof(GetCategoryById),
                 new { id = newCategory.Id },
@@ -25,23 +25,23 @@ namespace Gastitis.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetCategories()
+        public async Task<IActionResult> GetCategories(CancellationToken cancellationToken)
         {
-            var allCats = await _categoryService.GetAllAsync();
+            var allCats = await _categoryService.GetAllAsync(cancellationToken);
             return Ok(allCats);
         }
 
         [HttpGet("{id:int}")]
-        public async Task<IActionResult> GetCategoryById(int id)
+        public async Task<IActionResult> GetCategoryById(int id, CancellationToken cancellationToken)
         {
-            var category = await _categoryService.GetByIdAsync(id);
+            var category = await _categoryService.GetByIdAsync(id, cancellationToken);
             return Ok(category);
         }
 
         [HttpDelete("{id:int}")]
-        public async Task<IActionResult> DeleteCategoryById(int id)
+        public async Task<IActionResult> DeleteCategoryById(int id, CancellationToken cancellationToken)
         {
-            await _categoryService.DeleteAsync(id);
+            await _categoryService.DeleteAsync(id, cancellationToken);
             return NoContent();
         }
     }

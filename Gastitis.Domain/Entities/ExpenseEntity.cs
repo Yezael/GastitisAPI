@@ -12,7 +12,7 @@ namespace Gastitis.Domain.Entities
 		public UserEntity? OwnerUser { get; set; }
 
 		public int CategoryId { get; set; }
-		public CategoryEntity? Category { get; set; }
+		public CategoryEntity Category { get; set; } = null!;
 		public DateTime Date { get; set; }
 	}
 }

@@ -21,14 +21,14 @@ namespace Gastitis.Infrastructure.Services
             _currUserService = currentUserService;
         }
 
-        public async Task<ExpenseResponseDTO> CreateAsync(CreateExpenseDTO expenseRequest)
+        public async Task<ExpenseResponseDTO> CreateAsync(CreateExpenseDTO expenseRequest, CancellationToken cancellationToken)
         {
-            var userId = await _currUserService.GetUserIdAsync();
+            var userId = await _currUserService.GetUserIdAsync(cancellationToken);
 
             var categoryExist = await _dbContext.Categories.AnyAsync(c => 
                 c.Id == expenseRequest.CategoryId 
                 && (c.SystemCode.HasValue || c.OwnerUserId == userId)
-                );
+                , cancellationToken);
 
             if (!categoryExist)
             {
@@ -45,7 +45,7 @@ namespace Gastitis.Infrastructure.Services
             };
 
             _dbContext.Expenses.Add(newExpenseEntity);
-            await _dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync(cancellationToken);
 
             var response = new ExpenseResponseDTO()
             {
@@ -59,11 +59,11 @@ namespace Gastitis.Infrastructure.Services
             return response;
         }
 
-        public async Task<PagedResponseDTO<ExpenseResponseDTO>> GetAllAsync(ExpenseFilterDTO filter, ExpenseSortingDTO sorting)
+        public async Task<PagedResponseDTO<ExpenseResponseDTO>> GetAllAsync(ExpenseFilterDTO filter, ExpenseSortingDTO sorting, CancellationToken cancellationToken)
         {
             ValidatePaginationFilter(filter);
 
-            var currUserId = await _currUserService.GetUserIdAsync();
+            var currUserId = await _currUserService.GetUserIdAsync(cancellationToken);
 
             IQueryable<ExpenseEntity> query =
                 _dbContext.Expenses.AsNoTracking()
@@ -74,10 +74,10 @@ namespace Gastitis.Infrastructure.Services
             query = ApplyKeywordFilter(query, filter);
             query = ApplySorting(query, sorting);
 
-            var paginationMetaData = await GetPaginationMetaData(query, filter);
+            var paginationMetaData = await GetPaginationMetaData(query, filter, cancellationToken);
 
             query = ApplyPaginationFilter(query, filter);
-            var items = await GetExpenseResponseDTOs(query);
+            var items = await GetExpenseResponseDTOs(query, cancellationToken);
 
             var pagedResult = new PagedResponseDTO<ExpenseResponseDTO>()
             {
@@ -93,14 +93,15 @@ namespace Gastitis.Infrastructure.Services
 
         private static async Task<(int totalCount,int totalPages)> GetPaginationMetaData<T>(
             IQueryable<T> query, 
-            ExpenseFilterDTO filter)
+            ExpenseFilterDTO filter
+            , CancellationToken cancellationToken)
         {
-            var totalCount = await query.CountAsync();
+            var totalCount = await query.CountAsync(cancellationToken);
             int totalPages = (int)Math.Ceiling((double)totalCount / filter.PageSize);
             return (totalCount, totalPages);
         }
 
-        private async Task<IReadOnlyList<ExpenseResponseDTO>> GetExpenseResponseDTOs(IQueryable<ExpenseEntity> query)
+        private async Task<IReadOnlyList<ExpenseResponseDTO>> GetExpenseResponseDTOs(IQueryable<ExpenseEntity> query, CancellationToken cancellationToken)
         {
             return await query
                 .Select(e => new ExpenseResponseDTO()
@@ -111,7 +112,7 @@ namespace Gastitis.Infrastructure.Services
                     CategoryId = e.CategoryId,
                     Date = e.Date
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
 
         private static IQueryable<ExpenseEntity> ApplyDateFilter(IQueryable<ExpenseEntity> query, ExpenseFilterDTO filter)
@@ -203,16 +204,16 @@ namespace Gastitis.Infrastructure.Services
             return query.Skip(skip).Take(filter.PageSize);
         }
 
-        public async Task<ExpenseResponseDTO> GetByIdAsync(int id)
+        public async Task<ExpenseResponseDTO> GetByIdAsync(int id, CancellationToken cancellationToken)
         {
-			var userId = await _currUserService.GetUserIdAsync();
+			var userId = await _currUserService.GetUserIdAsync(cancellationToken);
 
 			var expenseEntity = await _dbContext.Expenses
                 .AsNoTracking()
                 .FirstOrDefaultAsync(
                     e => e.Id == id 
                     && e.OwnerUserId == userId
-                    );
+                    , cancellationToken);
 
             if (expenseEntity == null)
             {
@@ -230,9 +231,9 @@ namespace Gastitis.Infrastructure.Services
             return response;
         }
 
-        public async Task<ExpensesSummaryResponseDTO> GetSummaryAsync(ExpenseFilterDTO filter)
+        public async Task<ExpensesSummaryResponseDTO> GetSummaryAsync(ExpenseFilterDTO filter, CancellationToken cancellationToken)
         {
-            var currUserId = await _currUserService.GetUserIdAsync();
+            var currUserId = await _currUserService.GetUserIdAsync(cancellationToken);
 
             IQueryable<ExpenseEntity> query =
                 _dbContext.Expenses
@@ -245,16 +246,16 @@ namespace Gastitis.Infrastructure.Services
 
             return new ExpensesSummaryResponseDTO()
             {
-                TotalAmount = await query.SumAsync(e => e.Value),
-                ExpensesCount = await query.CountAsync()
+                TotalAmount = await query.SumAsync(e => e.Value, cancellationToken),
+                ExpensesCount = await query.CountAsync(cancellationToken)
             }; 
         }
 
         public async Task<PagedResponseDTO<ExpensesCategorySummaryResponseDTO>> GetCategorySummaryAsync(
-            ExpenseFilterDTO filterDTO)
+            ExpenseFilterDTO filterDTO, CancellationToken cancellationToken)
         {
 
-            var currentUserId = await _currUserService.GetUserIdAsync();
+            var currentUserId = await _currUserService.GetUserIdAsync(cancellationToken);
 
             ValidatePaginationFilter(filterDTO);
 
@@ -275,12 +276,12 @@ namespace Gastitis.Infrastructure.Services
                 })
                 .OrderBy(e => e.CategoryId);
 
-            var paginationMetaData = await GetPaginationMetaData(queryByCategory, filterDTO);
+            var paginationMetaData = await GetPaginationMetaData(queryByCategory, filterDTO, cancellationToken);
 
             var items = await queryByCategory
                 .Skip((filterDTO.Page - 1) * filterDTO.PageSize)
                 .Take(filterDTO.PageSize)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             var pagedResult = new PagedResponseDTO<ExpensesCategorySummaryResponseDTO>()
             {
@@ -294,14 +295,15 @@ namespace Gastitis.Infrastructure.Services
             return pagedResult;
         }
 
-        public async Task<ExpenseResponseDTO> UpdateAsync(int id, UpdateExpenseDTO expenseToUpdate)
+        public async Task<ExpenseResponseDTO> UpdateAsync(int id, UpdateExpenseDTO expenseToUpdate, CancellationToken cancellationToken)
         {
-            var currentUserId = await _currUserService.GetUserIdAsync();
+            var currentUserId = await _currUserService.GetUserIdAsync(cancellationToken);
 
             var expenseEntity = await _dbContext.Expenses
                 .FirstOrDefaultAsync(e => 
                     e.Id == id
-                    && e.OwnerUserId == currentUserId);
+                    && e.OwnerUserId == currentUserId
+                    , cancellationToken);
 
             if (expenseEntity == null)
             {
@@ -310,7 +312,8 @@ namespace Gastitis.Infrastructure.Services
             var categoryExist = await _dbContext.Categories.AnyAsync(
                 c => 
                 c.Id == expenseToUpdate.CategoryId 
-                && (c.SystemCode.HasValue || c.OwnerUserId == currentUserId));
+                && (c.SystemCode.HasValue || c.OwnerUserId == currentUserId)
+                , cancellationToken);
 
             if (!categoryExist)
             {
@@ -319,7 +322,7 @@ namespace Gastitis.Infrastructure.Services
             expenseEntity.Value = expenseToUpdate.Value;
             expenseEntity.Description = expenseToUpdate.Description;
             expenseEntity.CategoryId = expenseToUpdate.CategoryId;
-            await _dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync(cancellationToken);
             var response = new ExpenseResponseDTO()
             {
                 Id = expenseEntity.Id,
@@ -332,12 +335,12 @@ namespace Gastitis.Infrastructure.Services
         }
 
 
-        public async Task DeleteAsync(int expenseId)
+        public async Task DeleteAsync(int expenseId, CancellationToken cancellationToken)
         {
-            var currentUserId = await _currUserService.GetUserIdAsync();
+            var currentUserId = await _currUserService.GetUserIdAsync(cancellationToken);
 
             var expenseEntity = await _dbContext.Expenses
-                .FirstOrDefaultAsync(e => e.Id == expenseId && e.OwnerUserId == currentUserId);
+                .FirstOrDefaultAsync(e => e.Id == expenseId && e.OwnerUserId == currentUserId, cancellationToken);
 
             if (expenseEntity == null)
             {
@@ -345,7 +348,7 @@ namespace Gastitis.Infrastructure.Services
 			}
            
             _dbContext.Expenses.Remove(expenseEntity);
-            await _dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync(cancellationToken);
         }
     }
 }

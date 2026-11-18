@@ -7,12 +7,12 @@ namespace Gastitis.Application.Interfaces.Services
 {
 	public interface IExpenseService
 	{
-		Task<ExpenseResponseDTO> CreateAsync(CreateExpenseDTO createExpense);
-		Task<ExpenseResponseDTO> UpdateAsync(int id, UpdateExpenseDTO expenseToUpdate);
-		Task DeleteAsync(int expenseId);
-		Task<PagedResponseDTO<ExpenseResponseDTO>> GetAllAsync(ExpenseFilterDTO filter, ExpenseSortingDTO sorting);
-		Task<ExpenseResponseDTO> GetByIdAsync(int id);
-		Task<ExpensesSummaryResponseDTO> GetSummaryAsync(ExpenseFilterDTO filter);
-		Task<PagedResponseDTO<ExpensesCategorySummaryResponseDTO>> GetCategorySummaryAsync(ExpenseFilterDTO filter);
+		Task<ExpenseResponseDTO> CreateAsync(CreateExpenseDTO createExpense, CancellationToken cancellationToken);
+		Task<ExpenseResponseDTO> UpdateAsync(int id, UpdateExpenseDTO expenseToUpdate, CancellationToken cancellationToken);
+		Task DeleteAsync(int expenseId, CancellationToken cancellationToken);
+		Task<PagedResponseDTO<ExpenseResponseDTO>> GetAllAsync(ExpenseFilterDTO filter, ExpenseSortingDTO sorting, CancellationToken cancellationToken);
+		Task<ExpenseResponseDTO> GetByIdAsync(int id, CancellationToken cancellationToken);
+		Task<ExpensesSummaryResponseDTO> GetSummaryAsync(ExpenseFilterDTO filter, CancellationToken cancellationToken);
+		Task<PagedResponseDTO<ExpensesCategorySummaryResponseDTO>> GetCategorySummaryAsync(ExpenseFilterDTO filter, CancellationToken cancellationToken);
 	}
 }

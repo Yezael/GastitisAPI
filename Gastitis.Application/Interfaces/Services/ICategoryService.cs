@@ -4,9 +4,9 @@ namespace Gastitis.Application.Interfaces.Services
 {
 	public interface ICategoryService
 	{
-		Task<CategoryResponseDTO> CreateAsync(CreateCategoryDTO createCategory);
-		Task<IReadOnlyList<CategoryResponseDTO>> GetAllAsync();
-		Task<CategoryResponseDTO> GetByIdAsync(int id);
-		Task DeleteAsync(int categoryID);
+		Task<CategoryResponseDTO> CreateAsync(CreateCategoryDTO createCategory, CancellationToken cancellationToken);
+		Task<IReadOnlyList<CategoryResponseDTO>> GetAllAsync(CancellationToken cancellationToken);
+		Task<CategoryResponseDTO> GetByIdAsync(int id, CancellationToken cancellationToken);
+		Task DeleteAsync(int categoryID, CancellationToken cancellationToken);
 	}
 }

@@ -22,9 +22,9 @@ namespace Gastitis.Infrastructure.Services
             _currentUserservice = currentUserService;
         }
 
-        public async Task<IReadOnlyList<CategoryResponseDTO>> GetAllAsync()
+        public async Task<IReadOnlyList<CategoryResponseDTO>> GetAllAsync(CancellationToken cancellationToken)
         {
-            var currUserId = await _currentUserservice.GetUserIdAsync();
+            var currUserId = await _currentUserservice.GetUserIdAsync(cancellationToken);
 
             return await _dbContext.Categories
                 .AsNoTracking()
@@ -38,18 +38,18 @@ namespace Gastitis.Infrastructure.Services
                     Name = c.Name,
 					IsSystemCategory = c.SystemCode.HasValue
 				})
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
 
-        public async Task<CategoryResponseDTO> GetByIdAsync(int id)
+        public async Task<CategoryResponseDTO> GetByIdAsync(int id, CancellationToken cancellationToken)
         {
-            var currUserId = await _currentUserservice.GetUserIdAsync();
+            var currUserId = await _currentUserservice.GetUserIdAsync(cancellationToken);
 
             var categoryEntity = await _dbContext.Categories
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c =>
                 c.Id == id
-                && (c.SystemCode.HasValue || c.OwnerUserId == currUserId));
+                && (c.SystemCode.HasValue || c.OwnerUserId == currUserId), cancellationToken);
 
             if (categoryEntity == null)
             {
@@ -65,9 +65,9 @@ namespace Gastitis.Infrastructure.Services
             return response;
         }
 
-        public async Task<CategoryResponseDTO> CreateAsync(CreateCategoryDTO categoryRequest)
+        public async Task<CategoryResponseDTO> CreateAsync(CreateCategoryDTO categoryRequest, CancellationToken cancellationToken)
         {
-            var currUserId = await _currentUserservice.GetUserIdAsync();
+            var currUserId = await _currentUserservice.GetUserIdAsync(cancellationToken);
 
             var cleanName = categoryRequest.Name.Trim();
             var normalizedIncomingName = cleanName.ToLowerInvariant();
@@ -75,7 +75,7 @@ namespace Gastitis.Infrastructure.Services
             var isDuplicated = await _dbContext.Categories
                 .AnyAsync(c => 
                     (c.OwnerUserId == currUserId || c.SystemCode != null) &&
-                    c.Name.Trim().ToLower() == normalizedIncomingName);
+                    c.Name.Trim().ToLower() == normalizedIncomingName, cancellationToken);
 
 
 			if (isDuplicated)
@@ -92,7 +92,7 @@ namespace Gastitis.Infrastructure.Services
             _dbContext.Categories.Add(newCategoryEntity);
             try
             {
-                await _dbContext.SaveChangesAsync();
+                await _dbContext.SaveChangesAsync(cancellationToken);
             }
             catch (DbUpdateException ex) when (ex.InnerException is PostgresException
             {
@@ -112,17 +112,17 @@ namespace Gastitis.Infrastructure.Services
             return response;
         }
 
-        public async Task DeleteAsync(int categoryId)
+        public async Task DeleteAsync(int categoryId, CancellationToken cancellationToken)
         {
-            var currUserId = await _currentUserservice.GetUserIdAsync();
+            var currUserId = await _currentUserservice.GetUserIdAsync(cancellationToken);
 
             //Using transaction here because we are both updating and deleting as two separate async operations, if throw, transaction rollback changes
             //automatically.
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             var categoryEntity = await _dbContext.Categories.FirstOrDefaultAsync(c => 
                 c.Id == categoryId
-                && (c.SystemCode.HasValue || c.OwnerUserId == currUserId));
+                && (c.SystemCode.HasValue || c.OwnerUserId == currUserId), cancellationToken);
 
             if (categoryEntity == null)
             {
@@ -137,17 +137,17 @@ namespace Gastitis.Infrastructure.Services
             var noneCategoryId = await _dbContext.Categories
                 .Where(c => c.SystemCode == SystemCategoryCode.None)
                 .Select(c => c.Id)
-                .SingleAsync();
+                .SingleAsync(cancellationToken);
 
             await _dbContext.Expenses
                 .Where(e => e.CategoryId == categoryId)
                 .ExecuteUpdateAsync(update =>
-                    update.SetProperty(e => e.CategoryId, noneCategoryId));
+                    update.SetProperty(e => e.CategoryId, noneCategoryId), cancellationToken);
 
             _dbContext.Categories.Remove(categoryEntity);
-            await _dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync(cancellationToken);
 
-            await transaction.CommitAsync();
+            await transaction.CommitAsync(cancellationToken);
 		}
 	}
 }

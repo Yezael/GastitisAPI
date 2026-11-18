@@ -14,7 +14,7 @@ namespace Gastitis.API.Services
 			_userIdentityService = userIdentityService;
 		}
 
-		public async Task<int> GetUserIdAsync(CancellationToken cancellationToken = default)
+		public async Task<int> GetUserIdAsync(CancellationToken cancellationToken)
 		{
 			var currContext = _contextAccessor.HttpContext;
 			if(currContext == null)

@@ -16,9 +16,9 @@ namespace Gastitis.API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateExpense(CreateExpenseDTO expenseRequest)
+        public async Task<IActionResult> CreateExpense(CreateExpenseDTO expenseRequest, CancellationToken cancellationToken)
         {
-            var expenseResponseDTO = await _expenseService.CreateAsync(expenseRequest);
+            var expenseResponseDTO = await _expenseService.CreateAsync(expenseRequest, cancellationToken);
 
             return CreatedAtAction(
                 nameof(GetById),
@@ -27,54 +27,57 @@ namespace Gastitis.API.Controllers
 
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateExpense(int id, [FromBody] UpdateExpenseDTO expenseRequest)
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> UpdateExpense(int id, [FromBody] UpdateExpenseDTO expenseRequest, CancellationToken cancellationToken)
         {
-            var expenseResponseDTO = await _expenseService.UpdateAsync(id, expenseRequest);
+            var expenseResponseDTO = await _expenseService.UpdateAsync(id, expenseRequest, cancellationToken);
             return Ok(expenseResponseDTO);
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteExpense(int id)
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteExpense(int id, CancellationToken cancellationToken)
         {
-            await _expenseService.DeleteAsync(id);
+            await _expenseService.DeleteAsync(id, cancellationToken);
             return NoContent();
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<ExpenseResponseDTO>> GetById(int id)
+        [HttpGet("{id:int}")]
+        public async Task<ActionResult<ExpenseResponseDTO>> GetById(int id, CancellationToken cancellationToken)
         {
-            var expense = await _expenseService.GetByIdAsync(id);
+            var expense = await _expenseService.GetByIdAsync(id, cancellationToken);
             return Ok(expense);
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll(
             [FromQuery] ExpenseFilterDTO filter,
-            [FromQuery] ExpenseSortingDTO sorting
+            [FromQuery] ExpenseSortingDTO sorting,
+            CancellationToken cancellationToken
             )
         {
 
-            var allExpenses = await _expenseService.GetAllAsync(filter, sorting);
+            var allExpenses = await _expenseService.GetAllAsync(filter, sorting, cancellationToken);
             return Ok(allExpenses);
         }
 
         [HttpGet("summary")]
         public async Task<IActionResult> GetSummary(
-            [FromQuery] ExpenseFilterDTO filter
-            )
-        {
+            [FromQuery] ExpenseFilterDTO filter,
+			CancellationToken cancellationToken
+			)
+		{
 
-            var allExpenses = await _expenseService.GetSummaryAsync(filter);
+            var allExpenses = await _expenseService.GetSummaryAsync(filter, cancellationToken);
             return Ok(allExpenses);
         }
 
         [HttpGet("category-summary")]
         public async Task<IActionResult> GetCategorySummary(
-            [FromQuery] ExpenseFilterDTO filter
-            )
-        {
-            var categorySummary = await _expenseService.GetCategorySummaryAsync(filter);
+            [FromQuery] ExpenseFilterDTO filter,
+			CancellationToken cancellationToken
+			)
+		{
+            var categorySummary = await _expenseService.GetCategorySummaryAsync(filter, cancellationToken);
             return Ok(categorySummary);
         }
 
