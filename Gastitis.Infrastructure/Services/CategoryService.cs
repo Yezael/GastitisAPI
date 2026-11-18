@@ -5,6 +5,7 @@ using Gastitis.Domain.Entities;
 using Gastitis.Domain.Enums;
 using Gastitis.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Gastitis.Infrastructure.Services
 {
@@ -12,8 +13,10 @@ namespace Gastitis.Infrastructure.Services
     {
         private readonly GastitisDBContext _dbContext;
         private readonly ICurrentUserService _currentUserservice;
+        public const string DuplicateNameErrorMessage = "A category with this name already exists.";
 
-        public CategoryService(GastitisDBContext dbContext, ICurrentUserService currentUserService)
+
+		public CategoryService(GastitisDBContext dbContext, ICurrentUserService currentUserService)
         {
             _dbContext = dbContext;
             _currentUserservice = currentUserService;
@@ -66,14 +69,39 @@ namespace Gastitis.Infrastructure.Services
         {
             var currUserId = await _currentUserservice.GetUserIdAsync();
 
-            var newCategoryEntity = new CategoryEntity()
+            var cleanName = categoryRequest.Name.Trim();
+            var normalizedIncomingName = cleanName.ToLowerInvariant();
+
+            var isDuplicated = await _dbContext.Categories
+                .AnyAsync(c => 
+                    (c.OwnerUserId == currUserId || c.SystemCode != null) &&
+                    c.Name.Trim().ToLower() == normalizedIncomingName);
+
+
+			if (isDuplicated)
             {
-                Name = categoryRequest.Name,
+                throw new ApplicationValidationException("name", DuplicateNameErrorMessage);
+            }
+
+			var newCategoryEntity = new CategoryEntity()
+            {
+                Name = cleanName,
                 OwnerUserId = currUserId
             };
 
             _dbContext.Categories.Add(newCategoryEntity);
-            await _dbContext.SaveChangesAsync();
+            try
+            {
+                await _dbContext.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation,
+                ConstraintName: DatabaseConstants.UniqueCategoryNamePerOwnerIndex
+            })
+            {
+                throw new ApplicationValidationException("name", DuplicateNameErrorMessage);
+            }
 
             var response = new CategoryResponseDTO()
             {

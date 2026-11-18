@@ -4,6 +4,7 @@ using Gastitis.Application.Interfaces.Services;
 using Gastitis.Domain.Entities;
 using Gastitis.Domain.Enums;
 using Gastitis.Infrastructure.Persistence;
+using Gastitis.Infrastructure.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -63,6 +64,151 @@ namespace Gastitis.API.Tests.Integration.Categories
 			var categoryFound = await dbContext.Categories.SingleAsync(c => c.Id == createdCategoryId);
 			Assert.Equal(ownerId, categoryFound.OwnerUserId);
 			Assert.Null(categoryFound.SystemCode);
+		}
+
+		[Theory]
+		[InlineData("duplicate category")]
+		[InlineData("  Duplicate Category  ")]
+		[InlineData("DUPLICATE Category")]
+		public async Task CreateCategory_WithDuplicatedNameAndSameUser_ReturnsBadRequest(string duplicateCategoryName)
+		{
+			var seededName = "Duplicate Category";
+			(int userId, int categoryId) seededData = await SeedCategory(customName: seededName);
+
+			var createDTO = new CreateCategoryDTO()
+			{
+				Name = duplicateCategoryName
+			};
+
+			using var request = new HttpRequestMessage(HttpMethod.Post, "api/categories")
+			{
+				Content = JsonContent.Create(createDTO)
+			};
+
+			using var response = await _fixture.Client.SendAsync(request);
+			Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+			var errorDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+			Assert.NotNull(errorDetails);
+			var nameErrors = Assert.Contains("name", errorDetails.Errors);
+			Assert.Contains(CategoryService.DuplicateNameErrorMessage, nameErrors);
+
+			await using var scope = _fixture.Factory.Services.CreateAsyncScope();
+			var dbContext = scope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+			var count = await dbContext.Categories.CountAsync(c =>
+				c.OwnerUserId == seededData.userId && c.Name.Trim().ToLower() == "duplicate category");
+
+			Assert.Equal(1, count);
+		}
+
+		[Fact]
+		public async Task CreateCategory_WithDuplicatedNameAndDifferentUser_ReturnsCreated()
+		{
+			var customSubject = "other-subject";
+			await SeedCategory(customName: "Duplicate Category", customSubject: customSubject);
+
+			var createDTO = new CreateCategoryDTO()
+			{
+				Name = " duplicate category "
+			};
+
+			using var request = new HttpRequestMessage(HttpMethod.Post, "api/categories")
+			{
+				Content = JsonContent.Create(createDTO)
+			};
+
+			using var response = await _fixture.Client.SendAsync(request);
+			Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+			var createdCategoryDTO = await response.Content.ReadFromJsonAsync<CategoryResponseDTO>();
+			Assert.NotNull(createdCategoryDTO);
+
+
+			await using var scope = _fixture.Factory.Services.CreateAsyncScope();
+			var dbContext = scope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+			var persistedCategory = await dbContext.Categories
+				.Where(c => c.Id == createdCategoryDTO.Id)
+				.Include(c => c.OwnerUser)
+				.SingleOrDefaultAsync();
+
+			Assert.NotNull(persistedCategory);
+			Assert.NotNull(persistedCategory.OwnerUser);
+
+			Assert.Equal(TestAuthenticationHandler.TestIssuer, persistedCategory.OwnerUser.Issuer);
+			Assert.Equal(TestAuthenticationHandler.UserSubject, persistedCategory.OwnerUser.Subject);
+		}
+		[Fact]
+		public async Task CreateCategory_WithNotTrimmedName_ReturnsCreatedAndPersistTrimmedName()
+		{
+			var createDTO = new CreateCategoryDTO()
+			{
+				Name = "  test category  "
+			};
+
+			using var request = new HttpRequestMessage(HttpMethod.Post, "api/categories")
+			{
+				Content = JsonContent.Create(createDTO)
+			};
+
+			using var response = await _fixture.Client.SendAsync(request);
+			Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+			var createdCategoryDTO = await response.Content.ReadFromJsonAsync<CategoryResponseDTO>();
+			Assert.NotNull(createdCategoryDTO);
+
+			await using var scope = _fixture.Factory.Services.CreateAsyncScope();
+			var dbContext = scope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+
+			var persistedCategory = await dbContext.Categories.
+				Where(c => c.Id == createdCategoryDTO.Id).
+				Include(c => c.OwnerUser).
+				SingleOrDefaultAsync();
+
+			Assert.NotNull(persistedCategory);
+			Assert.NotNull(persistedCategory.OwnerUser);
+
+			Assert.Equal(TestAuthenticationHandler.TestIssuer, persistedCategory.OwnerUser.Issuer);
+			Assert.Equal(TestAuthenticationHandler.UserSubject, persistedCategory.OwnerUser.Subject);
+			Assert.Equal("test category", persistedCategory.Name);
+		}
+
+		[Fact]
+		public async Task CreateCategory_WithSystemName_ReturnsBadRequest()
+		{
+			string systemName;
+
+			await using (var getNameScope = _fixture.Factory.Services.CreateAsyncScope())
+			{
+				var getNameDbContext = getNameScope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+				systemName = await getNameDbContext.Categories
+					.Where(c => c.SystemCode == SystemCategoryCode.Groceries)
+					.Select(c => c.Name)
+					.SingleAsync();
+			}
+
+			var createDTO = new CreateCategoryDTO()
+			{
+				Name = systemName
+			};
+
+			using var request = new HttpRequestMessage(HttpMethod.Post, "api/categories")
+			{
+				Content = JsonContent.Create(createDTO)
+			};
+
+			using var response = await _fixture.Client.SendAsync(request);
+			Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+			var errorDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+			Assert.NotNull(errorDetails);
+			var nameErrors = Assert.Contains("name", errorDetails.Errors);
+			Assert.Contains(CategoryService.DuplicateNameErrorMessage, nameErrors);
+
+			await using var scope = _fixture.Factory.Services.CreateAsyncScope();
+			var dbContext = scope.ServiceProvider.GetRequiredService<GastitisDBContext>();
+
+			var count = await dbContext.Categories.CountAsync(c => c.Name.Trim().ToLower() == systemName.Trim().ToLowerInvariant());
+			Assert.Equal(1, count);
 		}
 
 
@@ -293,7 +439,7 @@ namespace Gastitis.API.Tests.Integration.Categories
 			var createdCategoryId1 = seedingResult1.categoryId;
 			var currentUserId = seedingResult1.userId;
 
-			var seedingResult2 = await SeedCategory();
+			var seedingResult2 = await SeedCategory(customName: "Second test category");
 			var createdCategoryId2 = seedingResult2.categoryId;
 
 			var otherSubjectSeedingResult = await SeedCategory(customSubject);
@@ -326,7 +472,9 @@ namespace Gastitis.API.Tests.Integration.Categories
 
 		}
 
-		private async Task<(int userId, int categoryId)> SeedCategory(string? customSubject = null)
+		private async Task<(int userId, int categoryId)> SeedCategory(
+			string? customSubject = null,
+			string? customName = null)
 		{
 			await using var seedCategoryScope = _fixture.Factory.Services.CreateAsyncScope();
 			var seedDBContext = seedCategoryScope.ServiceProvider.GetRequiredService<GastitisDBContext>();
@@ -335,7 +483,7 @@ namespace Gastitis.API.Tests.Integration.Categories
 
 			var category = new CategoryEntity()
 			{
-				Name = "Test Category",
+				Name = customName?? "Test Category",
 				OwnerUserId = currentUserId
 			};
 			seedDBContext.Categories.Add(category);
