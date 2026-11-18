@@ -160,11 +160,17 @@ namespace Gastitis.Infrastructure.Services
         private static IQueryable<ExpenseEntity> ApplyKeywordFilter(IQueryable<ExpenseEntity> query, ExpenseFilterDTO filter)
         {
             if (string.IsNullOrWhiteSpace(filter.Keyword)) return query;
-            return query.Where(e => EF.Functions.ILike(e.Description,$"%{filter.Keyword}%"));
-        }
+			var pattern = $"%{EscapeLikePattern(filter.Keyword)}%";
+			return query.Where(e => EF.Functions.ILike(e.Description, pattern, @"\"));
+		}
+
+		private static string EscapeLikePattern(string value) =>
+	value.Replace(@"\", @"\\")   // escape the escape character first
+		 .Replace("%", @"\%")
+		 .Replace("_", @"\_");
 
 
-        private static IQueryable<ExpenseEntity> ApplySorting(IQueryable<ExpenseEntity> query, ExpenseSortingDTO sorting)
+		private static IQueryable<ExpenseEntity> ApplySorting(IQueryable<ExpenseEntity> query, ExpenseSortingDTO sorting)
         {
             if (!Enum.IsDefined(sorting.SortDirection))
             {

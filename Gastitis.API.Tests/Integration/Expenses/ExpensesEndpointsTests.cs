@@ -411,6 +411,31 @@ namespace Gastitis.API.Tests.Integration.Expenses
 			Assert.Equal(DateTimeKind.Utc, expenseFound.Date.Kind);
 		}
 
+		[Theory]
+		[InlineData("50%", "50% off")]
+		[InlineData("_", "under_score")]
+		[InlineData("%", "50% off")]
+		[InlineData("pesos", "500 pesos")]
+		public async Task GetAll_WithKeywordContainingLikeWildcards_MatchesLiterally(string keyword, string expectedDescription)
+		{
+			await SeedExpense(customDescription: "50% off");
+			await SeedExpense(customDescription: "500 pesos");
+			await SeedExpense(customDescription: "under_score");
+
+			using var request = new HttpRequestMessage(
+				HttpMethod.Get,
+				$"api/expenses?keyword={Uri.EscapeDataString(keyword)}");
+
+			using var response = await _fixture.Client.SendAsync(request);
+			Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+			var pagedResponse = await response.Content.ReadFromJsonAsync<PagedResponseDTO<ExpenseResponseDTO>>();
+			Assert.NotNull(pagedResponse);
+
+			var match = Assert.Single(pagedResponse.Items);
+			Assert.Equal(expectedDescription, match.Description);
+			Assert.Equal(1, pagedResponse.TotalCount);
+		}
 
 		[Fact]
 		public async Task UpdateExpense_WithAnotherUserCategory_ReturnsNotFoundAndPreservesExpense()
