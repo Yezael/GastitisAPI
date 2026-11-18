@@ -28,5 +28,17 @@ namespace Gastitis.API.Validation.Expenses
 		{
 			return ruleInitial.NotEqual(0);
 		}
+
+		public static IRuleBuilderOptions<T, DateTime> ValidateExpenseDate<T>(
+			this IRuleBuilder<T, DateTime> ruleInitial, TimeProvider timeProvider)
+		{
+			return ruleInitial
+				.Must(d => d.Kind == DateTimeKind.Utc)
+					.WithMessage("'Date' must be a UTC timestamp ending in 'Z', e.g. 2026-11-16T10:00:00Z.")
+				.Must(d => 
+				d >= new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc) 
+				&& d <= timeProvider.GetUtcNow().AddYears(1).UtcDateTime)
+					.WithMessage("'Date' must be between the year 2000 and the next year.");
+		}
 	}
 }

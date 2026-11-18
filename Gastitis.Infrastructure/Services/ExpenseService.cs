@@ -61,8 +61,6 @@ namespace Gastitis.Infrastructure.Services
 
         public async Task<PagedResponseDTO<ExpenseResponseDTO>> GetAllAsync(ExpenseFilterDTO filter, ExpenseSortingDTO sorting, CancellationToken cancellationToken)
         {
-            ValidatePaginationFilter(filter);
-
             var currUserId = await _currUserService.GetUserIdAsync(cancellationToken);
 
             IQueryable<ExpenseEntity> query =
@@ -165,18 +163,6 @@ namespace Gastitis.Infrastructure.Services
             return query.Where(e => EF.Functions.ILike(e.Description,$"%{filter.Keyword}%"));
         }
 
-        private static void ValidatePaginationFilter(ExpenseFilterDTO filter)
-        {
-            if(filter.Page < 1)
-            {
-                throw new ApplicationValidationException(nameof(filter.Page), "Page must be greater than 0");
-            }
-
-            if (filter.PageSize < 1)
-            {
-                throw new ApplicationValidationException(nameof(filter.PageSize), "PageSize must be greater than 0.");
-            }
-        }
 
         private static IQueryable<ExpenseEntity> ApplySorting(IQueryable<ExpenseEntity> query, ExpenseSortingDTO sorting)
         {
@@ -257,14 +243,10 @@ namespace Gastitis.Infrastructure.Services
 
             var currentUserId = await _currUserService.GetUserIdAsync(cancellationToken);
 
-            ValidatePaginationFilter(filterDTO);
-
             var query = _dbContext.Expenses.AsNoTracking().Where(e => e.OwnerUserId == currentUserId);
-
             query = ApplyDateFilter(query, filterDTO);
             query = ApplyCategoryFilter(query, filterDTO);
             query = ApplyKeywordFilter(query, filterDTO);
-
 
             var queryByCategory = query.GroupBy(e => new { e.CategoryId, e.Category.Name })
                 .Select(g => new ExpensesCategorySummaryResponseDTO()
@@ -322,6 +304,8 @@ namespace Gastitis.Infrastructure.Services
             expenseEntity.Value = expenseToUpdate.Value;
             expenseEntity.Description = expenseToUpdate.Description;
             expenseEntity.CategoryId = expenseToUpdate.CategoryId;
+            expenseEntity.Date = expenseToUpdate.Date;
+
             await _dbContext.SaveChangesAsync(cancellationToken);
             var response = new ExpenseResponseDTO()
             {

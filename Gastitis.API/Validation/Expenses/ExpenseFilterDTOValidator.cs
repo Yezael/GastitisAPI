@@ -13,7 +13,7 @@ namespace Gastitis.API.Validation.Expenses
 				.WithMessage("'Year' must be provided when 'Month' is specified.");
 
 			RuleFor(x => x.Year)
-				.InclusiveBetween(2000, timeProvider.GetUtcNow().Year + 1)
+				.Must(x => x >= 2000 && x <= timeProvider.GetUtcNow().Year + 1)
 				.When(x => x.Year.HasValue);
 
 			RuleFor(x => x.Month)

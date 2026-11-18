@@ -373,6 +373,7 @@ namespace Gastitis.API.Tests.Integration.Expenses
 
 			var seedingExpenseResult = await SeedExpense(customValue: 10, customDescription: "original Description");
 			var seededExpenseId = seedingExpenseResult.expenseId;
+			var date = new DateTime(2026, 9, 28, 14, 0, 0, DateTimeKind.Utc);
 
 			using var request = new HttpRequestMessage(HttpMethod.Put, $"api/expenses/{seededExpenseId}")
 			{
@@ -382,6 +383,7 @@ namespace Gastitis.API.Tests.Integration.Expenses
 						Value = 500,
 						CategoryId = ownerUserCategoryId,
 						Description = "Test change",
+						Date = date
 					}
 					)
 			};
@@ -395,6 +397,7 @@ namespace Gastitis.API.Tests.Integration.Expenses
 			Assert.Equal(ownerUserCategoryId, expenseFromResponse.CategoryId);
 			Assert.Equal("Test change", expenseFromResponse.Description);
 			Assert.Equal(500, expenseFromResponse.Value);
+			Assert.Equal(date, expenseFromResponse.Date);
 
 			await using var scope = _fixture.Factory.Services.CreateAsyncScope();
 
@@ -404,6 +407,8 @@ namespace Gastitis.API.Tests.Integration.Expenses
 			Assert.Equal(ownerUserId, expenseFound.OwnerUserId);
 			Assert.Equal("Test change", expenseFound.Description);
 			Assert.Equal(500, expenseFound.Value);
+			Assert.Equal(date, expenseFound.Date);
+			Assert.Equal(DateTimeKind.Utc, expenseFound.Date.Kind);
 		}
 
 
@@ -426,6 +431,7 @@ namespace Gastitis.API.Tests.Integration.Expenses
 						Value = 500,
 						CategoryId = customUserCategoryId,
 						Description = "Test change",
+						Date = new DateTime(2026, 9, 28, 14, 0, 0, DateTimeKind.Utc)
 					}
 					)
 			};
@@ -472,7 +478,8 @@ namespace Gastitis.API.Tests.Integration.Expenses
 			{
 				Value = expectedUpdatedValue,
 				Description = expectedUpdatedDescription,
-				CategoryId = expectedUpdatedCategoryId
+				CategoryId = expectedUpdatedCategoryId,
+				Date = new DateTime(2026, 9, 28, 14, 0, 0, DateTimeKind.Utc)
 			};
 
 			using var updateRequest = new HttpRequestMessage(HttpMethod.Put, $"api/expenses/{expectedExpenseId}")
@@ -496,7 +503,8 @@ namespace Gastitis.API.Tests.Integration.Expenses
 			{
 				Value = 300,
 				Description = "Should not Update description",
-				CategoryId = categoryId
+				CategoryId = categoryId,
+				Date = new DateTime(2026, 9, 28, 14, 0, 0, DateTimeKind.Utc)
 			};
 			using var updateWithIncorrectUserRequest = new HttpRequestMessage(HttpMethod.Put, $"api/expenses/{expectedExpenseId}")
 			{
